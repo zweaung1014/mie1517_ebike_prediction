@@ -82,7 +82,7 @@ The counts 10 and 30 minutes before `t`. Each comes from the latest reading at o
 | 23 | `hour_cos` | float | `cos(2π · hour / 24)`. |
 | 24 | `is_weekend` | 0/1 | 1 on Saturday or Sunday. |
 
-### Inputs: weather (latest at or before `t`, from the station's nearest weather station)
+### Inputs: weather (latest ECCC hourly observation at or before `t`, from the station's nearest weather station)
 
 | # | Column | Type | Meaning |
 |---|---|---|---|
