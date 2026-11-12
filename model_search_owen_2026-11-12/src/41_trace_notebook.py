@@ -2,7 +2,7 @@
 
 The notebook retrains nothing. It reads the CSV logs in reports/tables/, the saved val predictions of
 37_model_search.py --save (to recompute their skill), the data file's bytes (SHA-1) and the train and val rows
-through score.load (to show that the test split is never read).
+through score.load (to show that the search scripts never read the test split).
 
 Usage (from src/):  python 41_trace_notebook.py
 Writes notebooks/model_search_trace.ipynb (run top to bottom, outputs saved) and model_search_trace.html.
@@ -31,7 +31,7 @@ md("""
 
 Each cell prints numbers of `reports/MODEL_SEARCH.md` from the file they come from,
 with the source path, the script that wrote it and the last commit of that file.
-Nothing is retrained. Val split only; the test rows are never read (section 2).
+Nothing is retrained. Val split only: the search never reads the test rows (section 2). The one test score, taken afterwards, is in `test_team_summary.csv` (`src/42_test_score.py`).
 Built and run by `src/41_trace_notebook.py`.
 """)
 
@@ -87,7 +87,7 @@ assert h.hexdigest() == expected
 """)
 
 md("""
-## 2. The test split is never read
+## 2. The search never reads the test split
 
 (a) every `load(` call in the search scripts asks for train and val only;
 (b) `score.load` filters the split inside the parquet read and checks the split rule;

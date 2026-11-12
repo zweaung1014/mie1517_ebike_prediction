@@ -298,7 +298,7 @@ def p6(pdf):
         "--seed 0 1 2); python 38_search_report.py --finalists …; python 39_val_noise.py; "
         "python 40_meeting_figures.py; python 42_test_score.py --dry (val checks only).",
         "Trace: notebooks/model_search_trace.ipynb (+ .html) prints every number of MODEL_SEARCH.md from its "
-        "CSV with the script and commit; it checks the data SHA-1 and that the test split is never read.",
+        "CSV with the script and commit; it checks the data SHA-1 and that the search never reads the test split.",
         "To change the model: add a config to GRIDS in 37_model_search.py; every run is logged to "
         "model_search_runs.csv. Data path: score.TEAM.",
     ], size=14, width=120)
