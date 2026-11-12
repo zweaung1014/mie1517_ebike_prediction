@@ -287,7 +287,21 @@ print("val rows at h = 14 and 15:",
 src(T / "model_search_by_horizon.csv", "src/37_model_search.py")
 """)
 
-md("## 10. Figures")
+md("## 10. Step 6: training-set size (val only)")
+code("""
+d = pd.read_csv(T / "data_size_summary.csv")
+print(d[["dropout", "train_days", "first_day", "train_rows", "best_epochs",
+         "classic_all_mean", "ebike_all_mean"]].round(4).to_string(index=False))
+src(T / "data_size_summary.csv", "src/44_data_size.py")
+g = pd.read_csv(T / "data_size_gap.csv")
+print(g[g.column.isin(["classic_all", "ebike_all"])].round(4).to_string(index=False))
+src(T / "data_size_gap.csv", "src/44_data_size.py")
+sl = pd.read_csv(T / "data_size_slope.csv")
+print(sl.round(4).to_string(index=False))
+src(T / "data_size_slope.csv", "src/44_data_size.py")
+""")
+
+md("## 11. Figures")
 for fig, script, caption in [
         ("search_step1.png", "38_search_report.py", "Fig. 1, Step 1"),
         ("search_step2.png", "38_search_report.py", "Fig. 2, Step 2"),
@@ -296,7 +310,8 @@ for fig, script, caption in [
         ("meeting_a_candidates.png", "40_meeting_figures.py", "Meeting (a)"),
         ("meeting_b_curves.png", "40_meeting_figures.py", "Meeting (b)"),
         ("meeting_c_horizon.png", "40_meeting_figures.py", "Meeting (c)"),
-        ("meeting_d_low_rows.png", "40_meeting_figures.py", "Meeting (d)")]:
+        ("meeting_d_low_rows.png", "40_meeting_figures.py", "Meeting (d)"),
+        ("data_size.png", "44_data_size.py", "Fig. 5, data size")]:
     code(f'''
 print("{caption}")
 src(ROOT / "reports" / "figures" / "{fig}", "src/{script}")

@@ -1,4 +1,4 @@
-"""reports/MEETING_2026-11-12.pdf: a 7-page brief for the team meeting, rebuilt from the tables (no hand-typed results).
+"""reports/MEETING_2026-11-12_long.pdf: the 7-page long brief for the team meeting, rebuilt from the tables (no hand-typed results).
 
 Reads reports/tables/: model_search_summary.csv (38), val_noise_gap.csv (39), test_team_summary.csv,
 test_team_by_day.csv, test_team_unseen.csv (42), baselines_team_val.csv (34), mlp_team_val.csv (33); and the meeting
@@ -20,7 +20,7 @@ from common import FIG_DIR
 
 ROOT = Path(__file__).resolve().parent.parent
 T = ROOT / "reports" / "tables"
-OUT = ROOT / "reports" / "MEETING_2026-11-12.pdf"
+OUT = ROOT / "reports" / "MEETING_2026-11-12_long.pdf"  # the short deck is 45_meeting_deck.py
 W, H = 16, 9
 NAVY, GREY, RED, GREEN = "#1f3b5c", "#666666", "#d62728", "#2ca02c"
 GITHUB = "<GitHub link: to be added (repo not decided yet)>"

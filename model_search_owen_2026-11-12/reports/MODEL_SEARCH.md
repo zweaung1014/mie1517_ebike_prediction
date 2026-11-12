@@ -2,7 +2,7 @@
 
 The search covered the architecture family, then the training hyperparameters. It ran on the team table data-v1 with the weather fix (team repo `main` 969473f). Every run used train only for fitting, and val for early stopping and selection; the search never read the test rows. The one test score, taken afterwards on Nov 12, is in `MEETING_2026-11-12.md` (Test result) and `test_team_summary.csv` (`42_test_score.py`). Skill is 1 − MSE_model / MSE_persistence on val, given as classic / e-bike over all rows. The low rows (count at t ≤ 2) are given separately. "± sd" is the sample sd over seeds 0–2, or seeds 0–1 where stated.
 
-Every number comes from a script in `src/` and its output in `reports/tables/`. `37_model_search.py` logs the runs to `model_search_runs.csv` (68 runs, 24 configurations), with curves in `model_search_curves.csv` and per-horizon skill in `model_search_by_horizon.csv`. `38_search_report.py` writes the summaries `model_search_summary.csv` and `model_search_by_horizon_summary.csv`. `39_val_noise.py` writes the val-sampling noise to `val_noise_gap.csv`, `val_noise_by_day.csv` and `val_noise_optimism.csv`. `notebooks/model_search_trace.ipynb` prints each number below from its file.
+Every number comes from a script in `src/` and its output in `reports/tables/`. `37_model_search.py` logs the runs to `model_search_runs.csv` (86 runs, 30 configurations, including Step 6), with curves in `model_search_curves.csv` and per-horizon skill in `model_search_by_horizon.csv`. `38_search_report.py` writes the summaries `model_search_summary.csv` and `model_search_by_horizon_summary.csv`. `39_val_noise.py` writes the val-sampling noise to `val_noise_gap.csv`, `val_noise_by_day.csv` and `val_noise_optimism.csv`. `notebooks/model_search_trace.ipynb` prints each number below from its file.
 
 This version was revised on Nov 12 after six independent reviews of commit 0ca8d64. They found no leakage, and the choice stands. What changed is listed at the end.
 
@@ -82,6 +82,12 @@ Dropout 0.3 needs about twice the epochs of 0.1: best epochs 17/20/20 against 9/
 | GRU 64 + MLP 3 × 256, dropout 0.1 | 176,002 | 7/7/7 | 0.105 ± 0.003 | 0.106 ± 0.003 | 0.087 ± 0.001 | 0.078 ± 0.002 |
 | LightGBM, 127 leaves | – | 243–327 / 84–108 trees | 0.106 ± 0.0004 | 0.099 ± 0.002 | 0.094 ± 0.002 | 0.080 ± 0.001 |
 
+## Step 6: training-set size (full budget, seeds 0–2; added Nov 12)
+
+2 × 256 with dropout 0.1 and 0.3 was refit on the most recent 5, 10 and 15 of the 20 train days (from Oct 14, 9 and 4; 2,068,870, 4,125,661 and 6,085,961 rows), with the same val days. `37_model_search.py --train-days K` cycles the subset so every epoch makes as many updates as one pass over all train rows; only the amount of data changes. The normaliser and station list stay those of the full train split.
+
+With dropout 0.1 the val skill rose from 0.072 / 0.067 (5 days) to 0.083 / 0.082 (10), 0.103 / 0.104 (15) and 0.109 / 0.109 (20 days) (`data_size_summary.csv`, `44_data_size.py`; Fig. 5). The last step, 15 → 20 days, still adds +0.007 / +0.006, about +0.009 / +0.008 per extra week, against +0.019 / +0.019 per week over 10 → 20 days (`data_size_slope.csv`). So the model is data-limited, with a slowing gain. The lead of dropout 0.3 over 0.1 on classic all rows is +0.004, +0.007, +0.005 and +0.003 at 5, 10, 15 and 20 days, and on e-bikes +0.005, +0.001, +0.002 and +0.001 (`data_size_gap.csv`), so it does not grow with data. More 1-min polls exist after the table's cut (the pollers kept running after Oct 28), so a later build of the table would add training days. The public snapshot archive goes back to Apr 2024 but at a median 16 min between snapshots (`FINDINGS.md`), too coarse for h = 2–15 min (not built).
+
 ## Noise: seeds, val days and stations
 
 The seed sd covers the weights, batch order and dropout masks on one fixed val set. Which val days and stations we happened to get adds a second error. `39_val_noise.py` measures it from the saved predictions of seeds 0–2 (Table 2). It uses a bootstrap over the 1,071 val stations and over the 5 val days (2,000 draws each), and z = gap / √(seed sd² + station-bootstrap sd²).
@@ -160,5 +166,8 @@ Fig. 3. Finalists at the full budget: train (dashed, with dropout on) and val (s
 
 Fig. 4. Finalists: val skill by horizon, mean over seeds, with the min–max range shaded. h = 15 has a tenth of the rows.
 ![Fig. 4](figures/search_skill_by_horizon.png)
+
+Fig. 5. Step 6: val skill against the number of train days, dropout 0.1 and 0.3, mean ± sd over seeds 0–2.
+![Fig. 5](figures/data_size.png)
 
 Meeting figures (`src/40_meeting_figures.py`): `meeting_a_candidates.png`, `meeting_b_curves.png`, `meeting_c_horizon.png`, `meeting_d_low_rows.png`.

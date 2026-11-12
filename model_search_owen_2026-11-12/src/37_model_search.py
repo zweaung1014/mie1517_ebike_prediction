@@ -142,7 +142,7 @@ def data():
     station_index = {sid: i for i, sid in enumerate(sorted(tr.station_id.unique()))}
     t = mlp33.tensors(tr, stats, station_index, TEAM)
     v = mlp33.tensors(va, stats, station_index, TEAM)
-    return t, v, va, len(station_index)
+    return t, v, va, len(station_index), tr.t_local.str[:10].to_numpy()  # last: the local day of each train row
 
 
 @torch.no_grad()
@@ -195,8 +195,17 @@ def sync(device):
         torch.mps.synchronize()
 
 
-def train(name, cfg, seed, budget, step, d, device):
-    (xt, st, nt, yt), (xv, sv, nv, yv), va, n_st = d
+def train(name, cfg, seed, budget, step, d, device, train_days=None):
+    """train_days = k: fit on the last k train days only (--train-days, Step 6). An epoch then still makes as many
+    updates as one pass over all train rows (the subset is cycled), so only the amount of data changes."""
+    (xt, st, nt, yt), (xv, sv, nv, yv), va, n_st, tr_day = d
+    n_updates = -(-len(xt) // cfg.batch)  # batches per epoch, as with all train rows
+    if train_days is not None:
+        keep = tr_day >= sorted(set(tr_day))[-train_days]
+        xt, st, nt, yt = xt[keep], st[keep], nt[keep], yt[keep]
+        name = f"{name}_days{train_days}"
+        print(f"{name}: last {train_days} train days, {len(xt):,} rows (from {sorted(set(tr_day))[-train_days]})",
+              flush=True)
     max_epochs, patience = BUDGETS[budget]
     run_id = f"s{step}_{name}_{budget}_seed{seed}"
     warm_up(cfg, xt.shape[1], n_st, device)
@@ -213,7 +222,14 @@ def train(name, cfg, seed, budget, step, d, device):
         t0 = time.time()
         model.train()
         total = 0.0
-        for idx in torch.randperm(len(xt)).split(cfg.batch):
+        if train_days is None:  # unchanged from the original runs, so they reproduce exactly
+            batches = torch.randperm(len(xt)).split(cfg.batch)
+        else:
+            perm = torch.cat([torch.randperm(len(xt)) for _ in range(-(-n_updates * cfg.batch // len(xt)))])
+            batches = perm[:n_updates * cfg.batch].split(cfg.batch)
+        seen = 0
+        for idx in batches:
+            seen += len(idx)
             xb, sb = xt[idx].to(device), st[idx].to(device)
             pred = nt[idx].to(device) + model(xb, sb)
             loss = loss_fn(pred, yt[idx].to(device))
@@ -224,9 +240,9 @@ def train(name, cfg, seed, budget, step, d, device):
         sync(device)
         sec = time.time() - t0
         val = ((predict(model, xv, sv, nv, device) - yv) ** 2).mean().item()
-        curve.append({"run_id": run_id, "epoch": epoch, "train_mse": total / len(xt), "val_mse": val,
+        curve.append({"run_id": run_id, "epoch": epoch, "train_mse": total / seen, "val_mse": val,
                       "epoch_s": sec})
-        print(f"  epoch {epoch:2d}  train {total / len(xt):.4f}  val {val:.4f}  ({sec:.0f} s)", flush=True)
+        print(f"  epoch {epoch:2d}  train {total / seen:.4f}  val {val:.4f}  ({sec:.0f} s)", flush=True)
         if val < best:
             best, best_epoch = val, epoch
             best_state = {k: v.detach().clone() for k, v in model.state_dict().items()}
@@ -314,6 +330,8 @@ if __name__ == "__main__":
     ap.add_argument("--lgbm", action="store_true")
     ap.add_argument("--device", default="cpu")
     ap.add_argument("--threads", type=int, default=6)
+    ap.add_argument("--train-days", type=int, default=None,
+                    help="fit on the last N train days only (equal updates per epoch); logged as NAME_daysN")
     ap.add_argument("--save", action="store_true",
                     help="retrain logged runs: save val predictions and weights to SAVED, check the skill, log nothing")
     args = ap.parse_args()
@@ -329,4 +347,4 @@ if __name__ == "__main__":
         d = data()
         for name in names:
             for seed in args.seed:
-                train(name, config_by_name(name), seed, args.budget, step, d, args.device)
+                train(name, config_by_name(name), seed, args.budget, step, d, args.device, args.train_days)
