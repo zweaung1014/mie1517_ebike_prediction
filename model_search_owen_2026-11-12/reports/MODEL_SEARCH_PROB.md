@@ -7,7 +7,7 @@ Mean ± sd over seeds 0–2; `prob_summary.csv` (val, `src/47_prob_report.py`) a
 
 What the search shows (val):
 
-1. **Non-linearity matters, the architecture hardly does.** LightGBM, the GRU and the three MLPs all reach 0.145–0.154 (classic) and 0.114–0.117 (e-bike). Logistic regression on the same inputs only matches calibrated persistence (−0.000 / +0.002).
+1. **The model class matters, the architecture hardly does.** LightGBM, the GRU and the three MLPs all reach 0.145–0.154 (classic) and 0.114–0.117 (e-bike). Logistic regression on the same inputs only matches calibrated persistence (−0.000 / +0.002); it lacks both a non-linear use of the inputs and the station identity, and which of the two matters is untested.
 2. **The gain is largest when one bike is left** (0.182 / 0.159 at 1 bike now, 0.038 / 0.039 at 6 or more; `prob_by_count.csv`) **and grows with the horizon** (0.079 / 0.058 at h = 2 min, 0.177 / 0.143 at h = 14 min; `prob_by_horizon.csv`).
 3. **In rider terms:** with 1 bike now, the bike is gone at t + h in 7.6 % (classic) / 9.2 % (e-bike) of rows. Flagging the 10 % of these rows with the lowest forecast catches 48 % / 41 % of the gone cases; calibrated persistence catches 16 % / 16 % (`prob_last_bike.csv`).
 4. **Calibrated:** every val bin with at least 1,000 rows is within 0.010 / 0.015 of the diagonal (test: 0.029 / 0.022; `prob_reliability.csv`, `prob_test_reliability.csv`, Fig. `figures/prob_reliability.png`).

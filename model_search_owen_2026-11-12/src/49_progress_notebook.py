@@ -300,7 +300,8 @@ md(f"""
    f"(classic) and {v(s(C, 'ebike', 'all', 'bss_calpers'))} ± {v(sd(C, 'ebike', 'all', 'bss_calpers'), 4)} (e-bike), and "
    f"the other networks and LightGBM are within {v(spread, 4)} of it. Logistic regression on the same inputs only matches "
    f"calibrated persistence ({v(s('logreg', 'classic', 'all', 'bss_calpers'))} / "
-   f"{v(s('logreg', 'ebike', 'all', 'bss_calpers'))}), so the gain needs a non-linear use of the inputs.")}
+   f"{v(s('logreg', 'ebike', 'all', 'bss_calpers'))}). It has neither a non-linear use of the inputs nor the station "
+   "identity; which of the two the gain needs is untested.")}
 
 {d(f"The rule picked {LABEL[C]}. Its lead is small: +{v(gap('mlp_2x256_do0.1', 'classic'), 4)} / "
    f"+{v(gap('mlp_2x256_do0.1', 'ebike'), 4)} over dropout 0.1, +{v(gap('lgbm', 'classic'), 4)} / "
