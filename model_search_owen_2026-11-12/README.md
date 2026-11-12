@@ -15,7 +15,7 @@ This folder is a search over models that predict the count of classic bikes and 
 Read first:
 
 - `reports/MODEL_SEARCH.md`: every step, the noise analysis, the design choice, limits and open items.
-- `reports/MEETING_2026-11-12.pdf`: the short deck for the team meeting (3 slides with build pages); `MEETING_2026-11-12_long.pdf` (7 pages) and `MEETING_2026-11-12.md` give more detail, including the test result and the training-set size check.
+- `reports/MEETING_2026-11-12.pdf`: the team-meeting deck (3 slides plus Backup); `MEETING_2026-11-12_builds.pdf` reveals the same story step by step; `MEETING_2026-11-12_long.pdf` (7 pages) and `MEETING_2026-11-12.md` give more detail, including the test result and the training-set size check.
 - `notebooks/model_search_trace.ipynb` (+ `.html`): prints every number of `MODEL_SEARCH.md` from its CSV, with the script and commit. It also checks the data file's SHA-1, and shows that the test split is never read during the search.
 
 ## Data it expects
@@ -64,7 +64,7 @@ All runs used CPU with 6 threads (`--threads`). Runs are deterministic on CPU: a
 | Trace notebook | `python 41_trace_notebook.py` | `notebooks/model_search_trace.ipynb`, `.html` |
 | Test score (once) | `python 42_test_score.py --dry` checks the val skill of every model without reading test. Without `--dry` it scores test, but `score.score_test` refuses any model already in `test_scores.csv`. | `test_scores.csv`, `test_team_*.csv` |
 | Training-set size (Step 6) | `python 37_model_search.py --run mlp_2x256_do0.1 --tag 6 --budget full --seed 0 1 2 --train-days 5` (also 10, 15; and `mlp_2x256_do0.3`), then `python 44_data_size.py` | rows `*_daysK` in the logs; `data_size_*.csv`, `figures/data_size.png` |
-| Meeting PDFs | `python 45_meeting_deck.py` (short deck) and `python 43_meeting_pdf.py` (long) | `reports/MEETING_2026-11-12.pdf`, `MEETING_2026-11-12_long.pdf`, `figures/deck_*.png`, `meeting_e_test.png` |
+| Meeting PDFs | `python 45_meeting_deck.py` (deck and builds) and `python 43_meeting_pdf.py` (long) | `reports/MEETING_2026-11-12.pdf`, `_builds.pdf`, `_long.pdf`, `figures/deck_*.png`, `meeting_e_test.png` |
 
 `37_model_search.py` appends to the logs in `reports/tables/`. To try a run without changing them, work on a copy of this folder. A quick check is `python 37_model_search.py --run mlp_2x64_e8 --tag 1 --seed 0`: 4 epochs, about 1–2 min on CPU. It should give the logged row `s1_mlp_2x64_e8_short_seed0`, val skill 0.0912 / 0.0933.
 
