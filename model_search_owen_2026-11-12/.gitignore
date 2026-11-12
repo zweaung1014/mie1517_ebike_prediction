@@ -1,3 +1,5 @@
 work/
 __pycache__/
 *.lock
+# the team repo ignores *.csv; these result tables belong to the package
+!reports/tables/*.csv
