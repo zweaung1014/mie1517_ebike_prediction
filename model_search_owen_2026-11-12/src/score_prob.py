@@ -20,6 +20,9 @@ Three references, all fit on the train split only (fit() never sees val or test)
   climatology      p = the station's train rate in that hour of the week (0-167, local time), shrunk toward the
                    station's overall train rate, which is shrunk toward the global train rate (K pseudo-rows each).
                    It ignores the count now; it is what a rider knows from habit.
+  station-hour pers. (added after the reviews, val only; fit_references(..., station_hour=True)) calibrated
+                   persistence plus a shrunk train correction per (count now, station, hour of day). A look-up
+                   table that also knows the station and the hour: the strongest reference without learning.
 Calibration: reliability() bins the forecast and gives the mean forecast and the observed rate per bin;
 reliability_term() is the binned reliability (calibration) part of the Murphy decomposition of the Brier score,
 sum_k n_k (pbar_k - ybar_k)^2 / N (0 = calibrated).
@@ -44,7 +47,8 @@ CAP = 10  # count now >= CAP pooled in one cell of the calibrated persistence
 K = 20  # pseudo-rows of shrinkage toward the coarser rate
 EPS = 1e-6  # probability clip for the log loss of models (persistence is never given a log loss)
 TEST_LOG = Path(__file__).resolve().parent.parent / "reports" / "tables" / "prob_test_scores.csv"
-REF_NAMES = {"persistence": "pers", "calibrated persistence": "calpers", "climatology": "clim"}
+REF_NAMES = {"persistence": "pers", "calibrated persistence": "calpers", "climatology": "clim",
+             "station-hour persistence": "sthour"}
 REF_COLUMNS = ["t_local", "station_id", "h_target", *(f"{x}_now" for x in TARGETS), *(f"y_{x}" for x in TARGETS),
                *(f"m_{x}" for x in TARGETS)]
 
@@ -141,7 +145,11 @@ class CalibratedPersistence:
 
 
 class Climatology:
-    """p = station x hour-of-week rate on train, shrunk toward the station rate, shrunk toward the global rate."""
+    """p = station x hour-of-week rate on train, shrunk toward the station rate, shrunk toward the global rate.
+    k = pseudo-rows of shrinkage (K by default; another value only for the check in 50_prob_checks.py)."""
+
+    def __init__(self, k=K):
+        self.k = k
 
     def fit(self, df):
         y = labels(df)
@@ -151,10 +159,10 @@ class Climatology:
             g = pd.DataFrame({"s": df.station_id.to_numpy(), "w": how, "y": y[:, i]})
             self.glob[x] = g.y.mean()
             st = g.groupby("s").y.agg(["sum", "size"])
-            self.station[x] = (st["sum"] + K * self.glob[x]) / (st["size"] + K)
+            self.station[x] = (st["sum"] + self.k * self.glob[x]) / (st["size"] + self.k)
             cell = g.groupby(["s", "w"]).y.agg(["sum", "size"])
             prior = self.station[x].reindex(cell.index.get_level_values("s")).to_numpy()
-            self.cell[x] = (cell["sum"] + K * prior) / (cell["size"] + K)
+            self.cell[x] = (cell["sum"] + self.k * prior) / (cell["size"] + self.k)
         return self
 
     def predict(self, df):
@@ -168,11 +176,44 @@ class Climatology:
         return out
 
 
-def fit_references(train):
-    """The three references, fit on the train rows only."""
+class StationHourPersistence:
+    """Added after the reviews (Nov 12; val only): calibrated persistence corrected per station and hour of day.
+    p = clip(p0 + r, 0, 1), with p0 = calibrated persistence (count now, h) and r = the train residual mean of
+    y - p0 in the cell (min(count now, CAP), station, local hour of day), shrunk toward 0 with K pseudo-rows.
+    A look-up table with no learning that knows what the screen shows plus which station and hour it is."""
+
+    def fit(self, df):
+        self.cal = CalibratedPersistence().fit(df)
+        y, p0 = labels(df), self.cal.predict(df)
+        hour = pd.Series(df.t_local).str[11:13].astype(int).to_numpy()
+        self.cell = {}
+        for i, x in enumerate(TARGETS):
+            c = np.minimum(df[f"{x}_now"].to_numpy(), CAP).astype(int)
+            g = pd.DataFrame({"c": c, "s": df.station_id.to_numpy(), "w": hour, "r": y[:, i] - p0[:, i]})
+            cell = g.groupby(["c", "s", "w"]).r.agg(["sum", "size"])
+            self.cell[x] = cell["sum"] / (cell["size"] + K)
+        return self
+
+    def predict(self, df):
+        out = self.cal.predict(df)
+        hour = pd.Series(df.t_local).str[11:13].astype(int).to_numpy()
+        for i, x in enumerate(TARGETS):
+            c = np.minimum(df[f"{x}_now"].to_numpy(), CAP).astype(int)
+            idx = pd.MultiIndex.from_arrays([c, df.station_id.to_numpy(), hour])
+            r = np.nan_to_num(self.cell[x].reindex(idx).to_numpy())  # cell not in train: no correction
+            out[:, i] = np.clip(out[:, i] + r, 0, 1)
+        return out
+
+
+def fit_references(train, station_hour=False):
+    """The three references of the search, fit on the train rows only; station_hour=True adds the fourth
+    (StationHourPersistence, added after the reviews and reported on val only)."""
     assert set(train.split) == {"train"}, "references are fit on the train split only"
-    return {"persistence": Persistence().fit(train), "calibrated persistence": CalibratedPersistence().fit(train),
+    refs = {"persistence": Persistence().fit(train), "calibrated persistence": CalibratedPersistence().fit(train),
             "climatology": Climatology().fit(train)}
+    if station_hour:
+        refs["station-hour persistence"] = StationHourPersistence().fit(train)
+    return refs
 
 
 # ---------------------------------------------------------------- tables
@@ -198,7 +239,8 @@ def prob_table(df, preds, refs, masks=None):
                        "brier": b, "log_loss": np.nan if name == "persistence" else log_loss(pp, yy),
                        "rel": reliability_term(pp, yy)}
                 for rname, short in REF_NAMES.items():
-                    row[f"bss_{short}"] = 1 - b / ref_b[rname]
+                    if rname in ref_b:
+                        row[f"bss_{short}"] = 1 - b / ref_b[rname]
                 rows.append(row)
     return pd.DataFrame(rows)
 

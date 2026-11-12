@@ -1,0 +1,2 @@
+base_patience,seeds,best_epochs,bss_calpers_classic_mean,bss_calpers_classic_sd,bss_calpers_ebike_mean,bss_calpers_ebike_sd,mean_brier,chosen_mean_brier,gap,threshold,rule_would_pick_base
+6,3,25/19/24,0.15001605052239075,0.0033685606632188636,0.11514560947965276,0.0012228027829591223,0.02817544421734325,0.02809123182400905,8.421239333419872e-05,6.262129420254976e-05,False

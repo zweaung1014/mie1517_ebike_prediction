@@ -17,8 +17,11 @@ Writes (reports/tables/ unless said otherwise)
                         z = gap / sqrt(seed sd^2 + station sd^2), and the val days (of 5) with a positive gap
   prob_by_count.csv     BSS per count now (0, 1, 2, 3-5, 6+) and target, chosen model and references
   prob_by_horizon.csv   BSS per target horizon (2-15 min) and target, chosen model, base model and references
-  prob_last_bike.csv    rows with 1 bike now: share whose bike is gone at t + h, and the share of those cases caught
-                        by flagging the 10 % / 20 % of rows with the lowest forecast (chosen, base, LightGBM, cal. pers., clim.)
+  prob_last_bike.csv    rows with 1 bike now: share whose bike is gone at t + h; flagging the 10 % / 20 % of rows with
+                        the lowest forecast: share of gone cases caught (overall and within each horizon) and share of
+                        flagged rows that are gone; random tie-breaks (chosen, base, LightGBM, the references)
+  prob_by_day.csv       BSS per val day and target (chosen, base, LightGBM, references)
+  The references include station-hour persistence (score_prob, added after the reviews; val only).
   prob_reliability.csv  reliability bins (10 equal-width) per model, target and subset, seed 0 of each net
   figures/prob_reliability.png    calibration of the chosen model and the references, all rows and low rows
   figures/prob_where.png          BSS against calibrated persistence by count now and by horizon
@@ -44,7 +47,7 @@ OTHERS = ["lgbm", "logreg"]
 LABEL = {"mlp_2x64_e8": "MLP 2x64 (base)", "mlp_2x256_do0.1": "MLP 2x256, dropout 0.1",
          "mlp_2x256_do0.3": "MLP 2x256, dropout 0.3", "gru64_3x256_do0.1": "GRU + 3x256, dropout 0.1",
          "lgbm": "LightGBM", "logreg": "logistic regression"}
-METRICS = ["brier", "log_loss", "rel", "bss_pers", "bss_calpers", "bss_clim"]
+METRICS = ["brier", "log_loss", "rel", "bss_pers", "bss_calpers", "bss_clim", "bss_sthour"]
 COUNT_BINS = [(0, 0, "0"), (1, 1, "1"), (2, 2, "2"), (3, 5, "3-5"), (6, 10_000, "6+")]
 DRAWS = 2000
 
@@ -174,7 +177,8 @@ def by_group(va, refs, models, key, groups):
                 row = {"target": x, "group": g, "rows": int(m.sum()), "base_rate": yy.mean(), "model": name,
                        "brier": b}
                 for rname, short in REF_NAMES.items():
-                    row[f"bss_{short}"] = 1 - b / rb[rname]
+                    if rname in rb:
+                        row[f"bss_{short}"] = 1 - b / rb[rname]
                 rows.append(row)
     return pd.DataFrame(rows)
 
@@ -188,26 +192,39 @@ def count_group(va, x):
 
 
 def last_bike(va, models):
-    """Rider view of the '1 bike now' rows (persistence says 'go'): how often the bike is gone at t + h, and how many
-    of those cases a warning on the rows with the lowest forecast would catch. models: name -> [preds per seed];
-    each seed is ranked on its own and the shares are averaged over seeds."""
+    """Rider view of the '1 bike now' rows (persistence says 'go'): how often the bike is gone at t + h, and what a
+    warning on the rows with the lowest forecast would do. models: name -> [preds per seed]; each seed is ranked on
+    its own (ties broken at random, seed 0) and the shares are averaged over seeds.
+      share_of_gone_caught       flag the lowest flag_share of all '1 bike now' rows
+      gone_rate_flagged          the share of flagged rows whose bike is gone (1 - the false-alarm share)
+      share_caught_within_h      flag the lowest flag_share inside each target horizon (rules out 'it only picks
+                                 the long horizons')"""
     y = labels(va)
+    rng = np.random.default_rng(0)
     rows = []
     for x_i, x in enumerate(TARGETS):
         m = va[f"{x}_now"].to_numpy() == 1
         gone = y[m, x_i] == 0
+        h = va.h_target.to_numpy()[m]
+        tie = rng.random(m.sum())
         for name, ps in models.items():
             for flag in [0.1, 0.2]:
-                caught, prec = [], []
+                caught, prec, within = [], [], []
                 for p in ps:
                     pm = p[m, x_i]
                     k = int(round(flag * m.sum()))
-                    low = np.argsort(pm, kind="stable")[:k]
+                    low = np.lexsort((tie, pm))[:k]
                     caught.append(gone[low].sum() / gone.sum())
                     prec.append(gone[low].mean())
+                    hit = 0
+                    for hh in np.unique(h):
+                        j = np.flatnonzero(h == hh)
+                        kj = int(round(flag * len(j)))
+                        hit += gone[j[np.lexsort((tie[j], pm[j]))[:kj]]].sum()
+                    within.append(hit / gone.sum())
                 rows.append({"target": x, "model": name, "rows_1_now": int(m.sum()), "gone_rate": gone.mean(),
                              "flag_share": flag, "gone_rate_flagged": np.mean(prec),
-                             "share_of_gone_caught": np.mean(caught)})
+                             "share_of_gone_caught": np.mean(caught), "share_caught_within_h": np.mean(within)})
     return pd.DataFrame(rows)
 
 
@@ -282,7 +299,7 @@ def main():
     by_name = runs_of(runs)
     df = load(["train", "val"], columns=REF_COLUMNS, ds=TEAM)
     data_table(df).to_csv(TABLES / "prob_data.csv", index=False)
-    refs = fit_references(df[df.split == "train"].reset_index(drop=True))
+    refs = fit_references(df[df.split == "train"].reset_index(drop=True), station_hour=True)
     va = df[df.split == "val"].reset_index(drop=True)
     del df
 
@@ -300,15 +317,19 @@ def main():
     by_count.to_csv(TABLES / "prob_by_count.csv", index=False)
     by_h = by_group(va, refs, models, lambda d, x: d.h_target.to_numpy(), list(range(2, 16)))
     by_h.to_csv(TABLES / "prob_by_horizon.csv", index=False)
-    last_bike(va, {**models, **{n: [refs[n].predict(va)] for n in ["calibrated persistence", "climatology"]}}) \
+    by_group(va, refs, models, lambda d, x: d.t_local.str[:10].to_numpy(), sorted(va.t_local.str[:10].unique())) \
+        .to_csv(TABLES / "prob_by_day.csv", index=False)
+    ref_names = ["calibrated persistence", "station-hour persistence", "climatology"]
+    last_bike(va, {**models, **{n: [refs[n].predict(va)] for n in ref_names}}) \
         .to_csv(TABLES / "prob_last_bike.csv", index=False)
-    rel = fig_reliability(va, refs, models[chosen][0], chosen)
+    fig_refs = {n: refs[n] for n in ["persistence", "calibrated persistence", "climatology"]}
+    rel = fig_reliability(va, fig_refs, models[chosen][0], chosen)
     rel.to_csv(TABLES / "prob_reliability.csv", index=False)
     fig_where(by_count, by_h, chosen)
 
     with pd.option_context("display.width", 160, "display.max_columns", 20):
         s = summ[summ.subset == "all"][["model", "target", "seeds", "brier_mean", "brier_sd", "bss_pers_mean",
-                                         "bss_calpers_mean", "bss_calpers_sd", "bss_clim_mean", "rel_mean"]]
+                                         "bss_calpers_mean", "bss_calpers_sd", "bss_sthour_mean", "bss_clim_mean"]]
         print(s.round(5).to_string(index=False))
         print(json.dumps({k: choice[k] for k in ["best", "chosen"]}))
         print(pd.read_csv(TABLES / "prob_noise.csv").round(4).to_string(index=False))

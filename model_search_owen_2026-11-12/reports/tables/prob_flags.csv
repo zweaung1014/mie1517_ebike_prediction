@@ -1,0 +1,5 @@
+split,input,min,max,rows
+train,renting_now,1,1,7525845
+train,returning_now,1,1,7525845
+val,renting_now,1,1,2083617
+val,returning_now,1,1,2083617

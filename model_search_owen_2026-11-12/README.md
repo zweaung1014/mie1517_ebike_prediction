@@ -32,14 +32,17 @@ type (classic, e-bike) is at the station at t + h, trained with binary cross-ent
   (seeds 0–2 each), LightGBM classifier (seeds 0–2) and logistic regression as references.
 - **Result:** MLP 2 × 256, dropout 0.3, chosen on val by a rule fixed before any run. BSS against calibrated
   persistence, classic / e-bike: val 0.154 / 0.117, test 0.125 / 0.092 (read once, chosen model only).
-  Against raw persistence: val 0.205 / 0.174, test 0.172 / 0.144.
+  Against raw persistence: val 0.205 / 0.174, test 0.172 / 0.144. A look-up table that also knows the station and
+  the hour (station-hour persistence, added after review, val only) gets 0.115 / 0.085 of it; the network beats
+  that table by 0.044 / 0.035. All on the table's anchors where some count is 2 or less.
 
 | Step | Command (from `src/`) | Writes |
 |---|---|---|
-| Score checks | `python test_score_prob.py` | prints 25 checks |
+| Score checks | `python test_score_prob.py` | prints 29 checks |
 | Search | `python 46_prob_search.py --logreg --lgbm --seed 0 1 2` and `python 46_prob_search.py --run mlp_2x64_e8 mlp_2x256_do0.1 mlp_2x256_do0.3 gru64_3x256_do0.1 --seed 0 1 2` (`--smoke` for a 1-epoch trial that writes to a temp folder) | `prob_runs.csv`, `prob_curves.csv`; `$MIE1517_DATA/models/prob/` |
 | Val report and choice | `python 47_prob_report.py` | `prob_summary.csv`, `prob_choice.json`, `prob_noise.csv`, `prob_by_*.csv`, `prob_last_bike.csv`, `prob_reliability.csv`, `figures/prob_*.png` |
 | Test (once) | `python 48_prob_test.py --dry` checks the val reproduction without reading test; without `--dry` it refuses runs already in `prob_test_scores.csv` | `prob_test_*.csv` |
+| Checks after the reviews | `python 46_prob_search.py --run mlp_2x64_e8 --patience 6 --seed 0 1 2 --threads 2`, `python 46_prob_search.py --lgbm-ablation all no_station_idx no_station_info no_lags counts_now_h counts_lags_h --seed 0`, `python 50_prob_checks.py` | `prob_extra_runs.csv`, `prob_ablation.csv`, `prob_patience_check.csv`, `prob_train_*.csv`, `prob_flags.csv`, `prob_climatology_check.csv`, `prob_sample_rows.csv`, `figures/prob_station_day.png` |
 | Notebook | `python 49_progress_notebook.py` | `notebooks/progress_report_prob.ipynb`, `.html` |
 
 ## Data it expects
@@ -114,6 +117,7 @@ src/score_prob.py      probability score: Brier, BSS, references, calibration, o
        └─ src/47_prob_report.py    val summary, choice, noise, where it wins, calibration
        └─ src/48_prob_test.py      the one test score of the chosen probability model
        └─ src/49_progress_notebook.py  progress-report notebook
+       └─ src/50_prob_checks.py    checks after the reviews (patience, day types, flags, climatology, sample)
 reports/   MODEL_SEARCH.md, MODEL_SEARCH_PROB.md, MEETING_2026-11-12.md / .pdf, tables/*.csv, figures/*.png
 notebooks/ model_search_trace.ipynb / .html, progress_report_prob.ipynb / .html
 ```

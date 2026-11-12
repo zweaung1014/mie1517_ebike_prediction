@@ -1,0 +1,9 @@
+split,variant,holiday,weekday,weekend,days,rows,off_day_share,rows_holiday,rows_weekday,rows_weekend,first_day,last_day
+buffer,forward,0,0,0,0,29503,,,,,,
+test,forward,0,5,2,7,2924739,0.286,,0.713,0.287,2026-11-04,2026-11-10
+train,forward,1,20,8,29,11198091,0.31,0.036,0.677,0.287,2026-09-29,2026-10-27
+val,forward,0,5,2,7,2924551,0.286,,0.708,0.292,2026-10-28,2026-11-03
+buffer,balanced,0,0,0,0,246980,,,,,,
+test,balanced,0,5,2,7,2924739,0.286,,0.713,0.287,2026-11-04,2026-11-10
+train,balanced,1,20,8,29,10999103,0.31,0.037,0.68,0.283,2026-09-29,2026-11-03
+val,balanced,0,5,2,7,2906062,0.286,,0.714,0.286,2026-10-09,2026-10-30

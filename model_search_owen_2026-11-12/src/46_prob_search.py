@@ -29,6 +29,9 @@ Writes
   reports/tables/prob_curves.csv   train and val cross-entropy per epoch
   DATA_DIR/models/prob/<run_id>.npy   val probabilities [n_val, 2] (float32); .pt weights, input stats, station index
                                       (LightGBM: <run_id>_<target>.txt boosters; logreg: .pkl). Not in git.
+Checks added after the six reviews (Nov 12; val only, separate logs, the search logs and the choice unchanged):
+  --patience N        a net with another early-stopping patience -> prob_extra_runs.csv, prob_extra_curves.csv
+  --lgbm-ablation S   LightGBM on the input sets in ABLATION -> prob_ablation.csv
 Usage (from src/):
   python 46_prob_search.py --run mlp_2x256_do0.1 --seed 0 1 2
   python 46_prob_search.py --lgbm --seed 0 1 2
@@ -61,6 +64,20 @@ CURVES = TABLES / "prob_curves.csv"
 SAVED = DATA_DIR / "models" / "prob"
 NETS = ["mlp_2x64_e8", "mlp_2x256_do0.1", "mlp_2x256_do0.3", "gru64_3x256_do0.1"]
 MAX_EPOCHS, PATIENCE = ms.BUDGETS["full"]
+EXTRA_RUNS = TABLES / "prob_extra_runs.csv"      # checks after the reviews (Nov 12): --patience
+EXTRA_CURVES = TABLES / "prob_extra_curves.csv"
+ABLATION_LOG = TABLES / "prob_ablation.csv"      # --lgbm-ablation
+_IN = mlp33.TEAM_INPUTS
+_LAGS = [c for c in _IN if c.endswith(("_tm10", "_tm30"))]
+_COUNTS_NOW = ["classic_now", "ebike_now", "docks_now"]
+ABLATION = {  # LightGBM input sets (after the reviews): what does the gain over calibrated persistence need?
+    "all": [*_IN, "station_idx"],
+    "no_station_idx": list(_IN),
+    "no_station_info": [c for c in _IN if c not in ("lat", "lon", "capacity")],
+    "no_lags": [c for c in _IN if c not in _LAGS] + ["station_idx"],
+    "counts_now_h": ["h", *_COUNTS_NOW],
+    "counts_lags_h": ["h", *_COUNTS_NOW, *_LAGS],
+}
 COLUMNS = list(dict.fromkeys([*mlp33.TEAM_COLUMNS, *REF_COLUMNS, "station_idx"]))
 
 
@@ -113,11 +130,14 @@ def summary(va, p, refs):
     return out
 
 
-def train(name, seed, d):
+def train(name, seed, d, patience=None):
+    """patience=None: the logged search (PATIENCE, logs RUNS / CURVES). An int: a check run after the reviews,
+    logged to EXTRA_RUNS / EXTRA_CURVES as p_<name>_pat<N>_seed<s>; the search logs are not touched."""
     cfg = ms.config_by_name(name)
     xt, st, yt, xv, sv, yv = (d[k] for k in ["xt", "st", "yt", "xv", "sv", "yv"])
     n_st = len(d["station_index"])
-    run_id = f"p_{name}_seed{seed}"
+    run_id = f"p_{name}_seed{seed}" if patience is None else f"p_{name}_pat{patience}_seed{seed}"
+    pat = PATIENCE if patience is None else patience
     ms.warm_up(cfg, xt.shape[1], n_st, "cpu")
     torch.manual_seed(seed)
     model = ms.Net(cfg, xt.shape[1], n_st)
@@ -144,7 +164,7 @@ def train(name, seed, d):
         if val < best:
             best, best_epoch = val, epoch
             best_state = {k: v.detach().clone() for k, v in model.state_dict().items()}
-        elif epoch - best_epoch >= PATIENCE:
+        elif epoch - best_epoch >= pat:
             break
     wall = time.time() - t_start
     model.load_state_dict(best_state)
@@ -154,27 +174,30 @@ def train(name, seed, d):
                 "stats": d["stats"], "station_index": d["station_index"]}, SAVED / f"{run_id}.pt")
     row = {"run_id": run_id, "name": name, "arch": cfg.arch, "depth": cfg.depth, "width": cfg.width, "emb": cfg.emb,
            "gru": cfg.gru, "dropout": cfg.dropout, "lr": cfg.lr, "batch": cfg.batch, "seed": seed,
-           "n_params": n_params, "best_epoch": best_epoch, "epochs_run": len(curve), "val_bce_best": best,
+           "n_params": n_params, "patience": pat, "best_epoch": best_epoch, "epochs_run": len(curve), "val_bce_best": best,
            "threads": torch.get_num_threads(), "wall_s": round(wall, 1),
            "s_per_epoch": round(np.mean([c["epoch_s"] for c in curve]), 1), **summary(d["va"], p, d["refs"]),
            "finished": pd.Timestamp.now().strftime("%Y-%m-%d %H:%M")}
-    append(RUNS, [row])
-    append(CURVES, curve)
+    append(RUNS if patience is None else EXTRA_RUNS, [row])
+    append(CURVES if patience is None else EXTRA_CURVES, curve)
     print(f"  -> Brier classic {row['brier_classic_all']:.5f} ebike {row['brier_ebike_all']:.5f}; BSS vs calpers "
           f"{row['bss_calpers_classic_all']:.4f} / {row['bss_calpers_ebike_all']:.4f} (epoch {best_epoch}, "
           f"{wall:.0f} s)", flush=True)
 
 
-def lgbm(seed, d, rounds=3000, lr=0.1, leaves=127):
-    """LightGBM binary classifier per target, the count search's LightGBM settings, early stop on val log loss."""
+def lgbm(seed, d, rounds=3000, lr=0.1, leaves=127, ablation=None):
+    """LightGBM binary classifier per target, the count search's LightGBM settings, early stop on val log loss.
+    ablation = a key of ABLATION: the same model on that input set only, logged to ABLATION_LOG (after the reviews;
+    the search log is not touched)."""
     import lightgbm as lgb
     tr, va = d["tr"], d["va"]
-    feats = [*mlp33.TEAM_INPUTS, "station_idx"]
-    run_id = f"p_lgbm_seed{seed}"
+    feats = [*mlp33.TEAM_INPUTS, "station_idx"] if ablation is None else ABLATION[ablation]
+    run_id = f"p_lgbm_seed{seed}" if ablation is None else f"p_lgbm_{ablation}_seed{seed}"
     t_start = time.time()
     p, iters = np.zeros((len(va), len(TARGETS))), []
     for i, x in enumerate(TARGETS):
-        dtr = lgb.Dataset(tr[feats], tr[f"y_{x}"], categorical_feature=["station_idx"], free_raw_data=False)
+        cat = ["station_idx"] if "station_idx" in feats else []
+        dtr = lgb.Dataset(tr[feats], tr[f"y_{x}"], categorical_feature=cat, free_raw_data=False)
         dva = lgb.Dataset(va[feats], va[f"y_{x}"], reference=dtr)
         params = {"objective": "binary", "learning_rate": lr, "num_leaves": leaves, "min_data_in_leaf": 200,
                   "feature_fraction": 0.9, "bagging_fraction": 0.8, "bagging_freq": 1, "seed": seed,
@@ -184,13 +207,17 @@ def lgbm(seed, d, rounds=3000, lr=0.1, leaves=127):
                             callbacks=[lgb.early_stopping(50, verbose=False), lgb.log_evaluation(200)])
         iters.append(booster.best_iteration)
         p[:, i] = booster.predict(va[feats], num_iteration=booster.best_iteration)
-        booster.save_model(str(SAVED / f"{run_id}_{x}.txt"), num_iteration=booster.best_iteration)
+        if ablation is None:
+            booster.save_model(str(SAVED / f"{run_id}_{x}.txt"), num_iteration=booster.best_iteration)
     wall = time.time() - t_start
     np.save(SAVED / f"{run_id}.npy", p.astype(np.float32))
-    row = {"run_id": run_id, "name": "lgbm", "arch": "lgbm", "lr": lr, "seed": seed, "best_epoch": json.dumps(iters),
+    row = {"run_id": run_id, "name": "lgbm" if ablation is None else f"lgbm_{ablation}", "arch": "lgbm",
+           "inputs": " ".join(feats), "lr": lr, "seed": seed, "best_epoch": json.dumps(iters),
            "threads": torch.get_num_threads(), "wall_s": round(wall, 1), **summary(va, p, d["refs"]),
            "finished": pd.Timestamp.now().strftime("%Y-%m-%d %H:%M")}
-    append(RUNS, [row])
+    if ablation is None:
+        row.pop("inputs")
+    append(RUNS if ablation is None else ABLATION_LOG, [row])
     print(f"{run_id}: Brier {row['brier_classic_all']:.5f} / {row['brier_ebike_all']:.5f} (iters {iters}, "
           f"{wall:.0f} s)", flush=True)
 
@@ -223,6 +250,10 @@ if __name__ == "__main__":
     ap.add_argument("--seed", type=int, nargs="+", default=[0, 1, 2])
     ap.add_argument("--lgbm", action="store_true")
     ap.add_argument("--logreg", action="store_true")
+    ap.add_argument("--patience", type=int, default=None,
+                    help="check run with another patience; logged to prob_extra_runs.csv, not the search log")
+    ap.add_argument("--lgbm-ablation", nargs="+", choices=list(ABLATION),
+                    help="LightGBM on an input subset; logged to prob_ablation.csv, not the search log")
     ap.add_argument("--threads", type=int, default=6)
     ap.add_argument("--smoke", action="store_true",
                     help="1 epoch on 200,000 train rows; logs and files go to a scratch folder, not the real ones")
@@ -231,6 +262,7 @@ if __name__ == "__main__":
         import tempfile
         tmp = Path(tempfile.mkdtemp(prefix="prob_smoke_"))
         RUNS, CURVES, SAVED, MAX_EPOCHS = tmp / "runs.csv", tmp / "curves.csv", tmp, 1
+        EXTRA_RUNS, EXTRA_CURVES, ABLATION_LOG = tmp / "extra.csv", tmp / "extra_curves.csv", tmp / "ablation.csv"
         print(f"smoke run: writing to {tmp}")
     SAVED.mkdir(parents=True, exist_ok=True)
     torch.set_num_threads(args.threads)
@@ -245,8 +277,12 @@ if __name__ == "__main__":
     if args.lgbm:
         for seed in args.seed:
             lgbm(seed, d)
+    if args.lgbm_ablation:
+        for name in args.lgbm_ablation:
+            for seed in args.seed:
+                lgbm(seed, d, ablation=name)
     if args.run:
         del d["tr"]
         for name in args.run:
             for seed in args.seed:
-                train(name, seed, d)
+                train(name, seed, d, args.patience)

@@ -9,7 +9,8 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 
-from score_prob import (CAP, K, CalibratedPersistence, Climatology, Persistence, brier, bss, fit_references,
+from score_prob import (CAP, K, CalibratedPersistence, Climatology, Persistence, StationHourPersistence, brier, bss,
+                        fit_references,
                         hour_of_week, log_loss, prob_table, reliability, reliability_term, score_prob_test)
 
 rng = np.random.default_rng(0)
@@ -31,6 +32,10 @@ def toy(n=40_000, split="train", seed=0):
                          "station_id": r.choice(["a", "b"], n), "h_target": r.integers(2, 16, n),
                          "classic_now": c[:, 0], "ebike_now": c[:, 1], "y_classic": y[:, 0], "y_ebike": y[:, 1],
                          "m_classic": c[:, 0] <= 2, "m_ebike": c[:, 1] <= 2}), p
+
+
+def labels_of(df):
+    return df[["y_classic", "y_ebike"]].to_numpy(float)
 
 
 def main():
@@ -88,6 +93,22 @@ def main():
     ok &= check("climatology shrinkage: one row -> (y + K*station)/(1 + K)",
                 np.isclose(c1.predict(one)[0, 0], st))
 
+    # station-hour persistence: a station whose bikes always stay gets a correction toward 1
+    tr2 = tr.copy()
+    tr2.loc[tr2.station_id == "a", ["y_classic", "y_ebike"]] = 1
+    sh = StationHourPersistence().fit(tr2)
+    va2 = va.copy()
+    va2.loc[va2.station_id == "a", ["y_classic", "y_ebike"]] = 1
+    p_sh, p_cp = sh.predict(va2), CalibratedPersistence().fit(tr2).predict(va2)
+    a_rows = (va2.station_id == "a").to_numpy()
+    ok &= check("station-hour persistence: moves station a toward its rate of 1",
+                (p_sh[a_rows, 0] >= p_cp[a_rows, 0] - 1e-12).all() and p_sh[a_rows, 0].mean() > p_cp[a_rows, 0].mean())
+    ok &= check("station-hour persistence beats calibrated persistence when stations differ",
+                brier(p_sh, labels_of(va2))[0] < brier(p_cp, labels_of(va2))[0])
+    ok &= check("station-hour persistence stays in [0, 1]", (p_sh >= 0).all() and (p_sh <= 1).all())
+    new2 = va.head(5).assign(station_id="new")
+    ok &= check("station-hour persistence: unseen station = calibrated persistence",
+                np.allclose(sh.predict(new2), CalibratedPersistence().fit(tr2).predict(new2)))
     refs = fit_references(tr)
     tab = prob_table(va, {"truth": va_p}, refs)
     a = tab[(tab.subset == "all") & (tab.target == "classic")].set_index("model")
