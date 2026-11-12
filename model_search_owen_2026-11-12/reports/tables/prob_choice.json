@@ -1,0 +1,33 @@
+{
+  "rule": "lowest mean val Brier (both targets, all rows, mean over seeds) among the nets; a net with fewer parameters within 2 x sqrt(sd_a^2/n_a + sd_b^2/n_b) of it is preferred (the smallest such)",
+  "nets": {
+    "mlp_2x64_e8": {
+      "seeds": 3,
+      "mean_brier": 0.02826333455653753,
+      "sd_brier": 0.00012919265468162633,
+      "n_params": 14722,
+      "gap_to_best": 0.0001721027325284792,
+      "threshold": 0.00014951652896408592
+    },
+    "mlp_2x256_do0.1": {
+      "seeds": 3,
+      "mean_brier": 0.02812782978450078,
+      "sd_brier": 5.859127289826872e-06,
+      "n_params": 82306
+    },
+    "mlp_2x256_do0.3": {
+      "seeds": 3,
+      "mean_brier": 0.02809123182400905,
+      "sd_brier": 8.697833144830505e-06,
+      "n_params": 82306
+    },
+    "gru64_3x256_do0.1": {
+      "seeds": 3,
+      "mean_brier": 0.028146130428388982,
+      "sd_brier": 5.225916119648467e-06,
+      "n_params": 176002
+    }
+  },
+  "best": "mlp_2x256_do0.3",
+  "chosen": "mlp_2x256_do0.3"
+}

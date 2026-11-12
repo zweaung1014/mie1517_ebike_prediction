@@ -1,0 +1,2 @@
+split,rows,stations,first_day,last_day,days,classic_base_rate,classic_low_share,classic_flip_rate,ebike_base_rate,ebike_low_share,ebike_flip_rate
+test,1747660,1072,2026-10-24,2026-10-28,5,0.7228242335465709,0.5115834887792821,0.02246146275591362,0.37923795246214936,0.9207626197315267,0.03736710801872218

@@ -18,6 +18,30 @@ Read first:
 - `reports/MEETING_2026-11-12.pdf`: the team-meeting deck (3 slides plus Backup); `MEETING_2026-11-12_builds.pdf` reveals the same story step by step; `MEETING_2026-11-12_long.pdf` (7 pages) and `MEETING_2026-11-12.md` give more detail, including the test result and the training-set size check.
 - `notebooks/model_search_trace.ipynb` (+ `.html`): prints every number of `MODEL_SEARCH.md` from its CSV, with the script and commit. It also checks the data file's SHA-1, and shows that the test split is never read during the search.
 
+## Probability output (added 12 Nov)
+
+The same data, split, inputs and horizons, with a new output: the probability that at least one bike of each
+type (classic, e-bike) is at the station at t + h, trained with binary cross-entropy. Details:
+`reports/MODEL_SEARCH_PROB.md`; the progress-report notebook is `notebooks/progress_report_prob.ipynb` (+ `.html`).
+
+- **Score:** Brier skill score BSS = 1 − Brier_model / Brier_ref against three references fit on train:
+  persistence (1 if a bike is there now), calibrated persistence (P(bike at t + h | count now, h)) and a
+  station × hour-of-week climatology (`src/score_prob.py`, toy checks in `src/test_score_prob.py`).
+  Log loss against persistence is infinite (0/1 forecasts), so it is not used.
+- **Searched:** the base MLP 2 × 64, MLP 2 × 256 with dropout 0.1 and 0.3, the GRU with a 3 × 256 head
+  (seeds 0–2 each), LightGBM classifier (seeds 0–2) and logistic regression as references.
+- **Result:** MLP 2 × 256, dropout 0.3, chosen on val by a rule fixed before any run. BSS against calibrated
+  persistence, classic / e-bike: val 0.154 / 0.117, test 0.125 / 0.092 (read once, chosen model only).
+  Against raw persistence: val 0.205 / 0.174, test 0.172 / 0.144.
+
+| Step | Command (from `src/`) | Writes |
+|---|---|---|
+| Score checks | `python test_score_prob.py` | prints 25 checks |
+| Search | `python 46_prob_search.py --logreg --lgbm --seed 0 1 2` and `python 46_prob_search.py --run mlp_2x64_e8 mlp_2x256_do0.1 mlp_2x256_do0.3 gru64_3x256_do0.1 --seed 0 1 2` (`--smoke` for a 1-epoch trial that writes to a temp folder) | `prob_runs.csv`, `prob_curves.csv`; `$MIE1517_DATA/models/prob/` |
+| Val report and choice | `python 47_prob_report.py` | `prob_summary.csv`, `prob_choice.json`, `prob_noise.csv`, `prob_by_*.csv`, `prob_last_bike.csv`, `prob_reliability.csv`, `figures/prob_*.png` |
+| Test (once) | `python 48_prob_test.py --dry` checks the val reproduction without reading test; without `--dry` it refuses runs already in `prob_test_scores.csv` | `prob_test_*.csv` |
+| Notebook | `python 49_progress_notebook.py` | `notebooks/progress_report_prob.ipynb`, `.html` |
+
 ## Data it expects
 
 The data is **data-v1 with the weather fix**: `data/processed/training_table.parquet`, built by this repo's `notebooks/build_dataset.ipynb` at `main` 969473f.
@@ -85,8 +109,13 @@ src/33_train_mlp.py    the table's 20 inputs (team_features), tensors, the Nov 1
             ├─ src/44_data_size.py       training-set size (Step 6)
             └─ src/45_meeting_deck.py    short meeting deck
   └─ src/42_test_score.py     the test score (protocol in its docstring)
-reports/   MODEL_SEARCH.md, MEETING_2026-11-12.md / .pdf, tables/*.csv, figures/*.png
-notebooks/ model_search_trace.ipynb, model_search_trace.html
+src/score_prob.py      probability score: Brier, BSS, references, calibration, one-time test log
+  └─ src/46_prob_search.py    probability models (BCE), LightGBM classifier, logistic regression
+       └─ src/47_prob_report.py    val summary, choice, noise, where it wins, calibration
+       └─ src/48_prob_test.py      the one test score of the chosen probability model
+       └─ src/49_progress_notebook.py  progress-report notebook
+reports/   MODEL_SEARCH.md, MODEL_SEARCH_PROB.md, MEETING_2026-11-12.md / .pdf, tables/*.csv, figures/*.png
+notebooks/ model_search_trace.ipynb / .html, progress_report_prob.ipynb / .html
 ```
 
 Not included: raw data, the training table and model weights. The weights can be rebuilt with `37_model_search.py --save`.
