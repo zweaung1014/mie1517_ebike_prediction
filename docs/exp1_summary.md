@@ -16,7 +16,14 @@ The app only shows what is there **right now**. It doesn't predict anything. Our
 
 The model gives a **chance** for each of the three (for example "e-bike: 72%"), not just yes or no.
 
-We only use the model for the **hard cases**: when the station shows 0, 1 or 2 of something. If a station shows 3 or more, we just say "yes", because it is almost always still there a few minutes later.
+### Hard cases and easy cases
+
+Each label (classic, e-bike, dock) is checked on its own:
+
+- **Hard case:** the station shows **0, 1 or 2** right now. The answer could go either way, so **the model answers**.
+- **Easy case:** the station shows **3 or more**. It is almost always still there a few minutes later, so a simple rule says **"yes"**.
+
+All results below are for **hard cases only**.
 
 ---
 
@@ -35,9 +42,18 @@ We only use the model for the **hard cases**: when the station shows 0, 1 or 2 o
 
 ---
 
-## 3. The model
+## 3. The models
 
-A simple neural network called an **MLP** (multi-layer perceptron). One network is shared by all stations.
+We compare our neural network against the app and two simpler models. All of them give a chance for each label.
+
+| Model | How it works |
+|---|---|
+| **App rule** | 100% if the count right now is at least 1, otherwise 0%. This is what riders rely on today. |
+| **Lookup table** | Groups past cases by count now, arrival time and recent trend (going up, flat or down). The chance is how often the item was there in that group. |
+| **GBM (gradient-boosted trees)** | A few hundred small decision trees, each fixing the errors of the ones before. A strong standard model for table data. |
+| **MLP (our neural network)** | Described below. |
+
+### Our MLP
 
 **What goes in (52 numbers):**
 - Counts of classic bikes, e-bikes and free docks: now, 10 minutes ago and 30 minutes ago
@@ -56,57 +72,77 @@ A simple neural network called an **MLP** (multi-layer perceptron). One network 
 - Each output is turned into a chance between 0% and 100%
 
 **How it learned:**
-- **Loss:** binary cross-entropy. It rewards the model for giving a high chance when the bike was there and a low chance when it wasn't. Only the hard cases count.
+- **Loss:** binary cross-entropy. It rewards the model for giving a high chance when the item was there and a low chance when it wasn't. Only hard cases count.
 - **Optimizer:** AdamW
 - **Training time:** about 1 minute on a laptop GPU. It stopped by itself after 10 rounds and kept round 7, the best one on validation.
 
-**What we compared it against:**
-1. **App rule:** "yes if the count right now is at least 1". This is what riders do today.
-2. **Lookup table:** the past success rate for the same count, arrival time and recent trend.
-3. **Gradient-boosted trees:** a strong standard model for table data.
+---
+
+## 4. How we score the models: the Brier score
+
+The model gives chances, so we score the chances directly using the **Brier score**:
+
+> Brier = average of (chance we gave − what happened)², where "what happened" is 1 if the item was there and 0 if it wasn't.
+
+- **Lower is better.** 0 is perfect.
+- Saying 90% when the bike was there costs very little (0.01). Saying 10% when it was there costs a lot (0.81).
+- It rewards a model for being **sure when it should be sure, and unsure when it should be unsure**.
+
+**Why not plain accuracy (right or wrong)?** To get accuracy, every chance has to be turned into a yes or no, which throws away how sure the model is. Accuracy can't tell "90% sure" apart from "51% sure", and that difference is exactly where the model beats the app.
 
 ---
 
-## 4. Results (test days, hard cases only)
+## 5. Results (test days, hard cases only)
 
-### 4a. How good are the chances?
+### Main result
 
-We use the **Brier score**: how far, on average, the chance we gave was from what really happened. **Lower is better.**
+Test Brier score per label (lower is better):
 
-| | App rule | Lookup table | Boosted trees | **Our MLP** | MLP vs app |
+| | App rule | Lookup table | GBM | **MLP** | MLP vs app |
 |---|---|---|---|---|---|
 | Classic bike | 0.0430 | 0.0395 | 0.0358 | **0.0355** | 17% better |
 | E-bike | 0.0404 | 0.0375 | 0.0348 | **0.0345** | 15% better |
 | Free dock | 0.0774 | 0.0674 | 0.0614 | **0.0613** | 21% better |
 
-- The MLP is the best of all four on every label.
-- It beats the app by 15–21%.
-- It beats the boosted trees only **by a hair**. On this data, the two are about equally good.
+*Source: `train_model.ipynb`, section 9 "Test results", table "Test Brier".*
 
-### 4b. How often is a plain "yes / no" right?
+- **All three models beat the app** on every label.
+- **The MLP is the best on every label**, 15–21% better than the app.
+- **The MLP beats the GBM only by a hair** (0.0001–0.0003). On this data, the two are about tied.
+- The Lookup table, which uses only the count, arrival time and trend, is clearly behind. So the extra inputs (station, time of day, weather) help.
 
-Here the model says "yes" when its chance is above a cutoff, and we count right and wrong answers.
+### "Will the bike still be there?"
 
-| | Examples | App correct | MLP correct (best cutoff) | MLP correct (70% cutoff) |
-|---|---|---|---|---|
-| Classic bike | 894,074 | 95.70% | 95.70% | 95.37% |
-| E-bike | 1,609,180 | 95.96% | 95.97% | 95.67% |
-| Free dock | 252,537 | 92.26% | 92.23% | 91.84% |
+These are the hard cases where the station shows **1 or 2** bikes right now:
 
-- **As a yes/no answer, the model ties with the app.** The reason is that the count right now already decides most answers. If a station shows 0 classic bikes, 96% of the time there are still none later. If it shows 1, it is still there 93% of the time.
-- **A stricter 70% cutoff** cuts wrong "yes" answers (wasted trips) by about 12–23%. But it adds more wrong "no" answers, so overall it gets a few thousand fewer right per label.
+| | Rows | App | Lookup | GBM | **MLP** | MLP vs app |
+|---|---|---|---|---|---|---|
+| Classic, showing 1–2 | 409,774 | 0.0462 | 0.0413 | 0.0374 | **0.0372** | 19% better |
+| showing 1 | 250,542 | 0.0658 | 0.0582 | 0.0525 | **0.0522** | 21% better |
+| showing 2 | 159,232 | 0.0153 | 0.0146 | 0.0138 | **0.0137** | 10% better |
+| E-bike, showing 1–2 | 524,058 | 0.0615 | 0.0550 | 0.0503 | **0.0499** | 19% better |
+| showing 1 | 373,205 | 0.0783 | 0.0695 | 0.0632 | **0.0627** | 20% better |
+| showing 2 | 150,853 | 0.0197 | 0.0190 | 0.0182 | **0.0181** | 8% better |
+
+*Computed from `models/test_predictions.parquet`. This table is not in the notebooks.*
+
+- The model helps most when **only 1 bike is showing**, the riskiest case for a rider.
+- With 2 showing, the bike is usually still there, so the app is already close.
+
+### A note on accuracy
+
+`analyze_accuracy.ipynb` turns the chances into yes/no answers and counts how many are right. As a yes/no answer, the model **ties with the app** (for example, 95.70% vs 95.70% for classic bikes). This is expected: the count right now already decides most yes/no answers. The model's real gain is in **how sure** it is, which only the Brier score shows.
 
 ---
 
-## 5. What this means
+## 6. What this means
 
-1. **The model's value is in the chance, not the yes/no.** It knows *how sure* to be. For example, "1 bike now, arriving in 14 minutes" should get a lower chance than "2 bikes now, arriving in 3 minutes." A plain yes/no throws that away.
-2. **So the app should show the chance**, or a simple "likely / maybe / unlikely" label, not just yes or no.
+1. **The model gives better chances than the app**, 15–21% better by Brier score, and about 20% better when only 1 bike is showing.
+2. **The app should show the chance**, or a simple "likely / maybe / unlikely" label, not just yes or no. Otherwise the gain is lost.
 3. **The neural network only barely beats the boosted trees.** For the course, we need to show why deep learning is worth it here.
 
-## 6. Ideas for the next experiment
+## 7. Ideas for the next experiment
 
 - Give the model a longer history (for example the last 1–2 hours) and try a sequence model such as an **LSTM** or GRU. Right now it only sees 3 points in time, so a sequence model has nothing to work with.
 - Add information about nearby stations (for example, a nearby station just emptied).
 - Collect more data. We have only about one month, and the test set is only about 4 days.
-- Try a "likely / maybe / unlikely" answer and check how often each one is right.
