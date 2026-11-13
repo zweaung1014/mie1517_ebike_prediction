@@ -2,7 +2,7 @@
 
 A short update on the first full run: what we built, how we tested it, and what we found.
 
-Notebooks: `build_dataset.ipynb` → `train_model.ipynb` → `analyze_accuracy.ipynb`. Saved model and results are in `models/`.
+Notebooks: `build_dataset.ipynb` → `train_model.ipynb`. Saved model and results are in `models/`.
 
 ---
 
@@ -88,8 +88,6 @@ The model gives chances, so we score the chances directly using the **Brier scor
 - Saying 90% when the bike was there costs very little (0.01). Saying 10% when it was there costs a lot (0.81).
 - It rewards a model for being **sure when it should be sure, and unsure when it should be unsure**.
 
-**Why not plain accuracy (right or wrong)?** To get accuracy, every chance has to be turned into a yes or no, which throws away how sure the model is. Accuracy can't tell "90% sure" apart from "51% sure", and that difference is exactly where the model beats the app.
-
 ---
 
 ## 5. Results (test days, hard cases only)
@@ -128,10 +126,6 @@ These are the hard cases where the station shows **1 or 2** bikes right now:
 
 - The model helps most when **only 1 bike is showing**, the riskiest case for a rider.
 - With 2 showing, the bike is usually still there, so the app is already close.
-
-### A note on accuracy
-
-`analyze_accuracy.ipynb` turns the chances into yes/no answers and counts how many are right. As a yes/no answer, the model **ties with the app** (for example, 95.70% vs 95.70% for classic bikes). This is expected: the count right now already decides most yes/no answers. The model's real gain is in **how sure** it is, which only the Brier score shows.
 
 ---
 
