@@ -215,8 +215,7 @@ KEY = f"""
 
 **What we predict and how we score it**
 
-1. {d("We predict P(at least one bike at t + h) for each bike type, because whether a bike is there is what a "
-      "rider needs to know.", "K")}
+1. {d("We predict P(at least one bike at t + h) for each bike type: the question a rider has.", "K")}
 2. {d("The score is the skill against a reference forecast, skill = 1 − Brier_model / Brier_ref, with calibrated "
       "persistence (an honest 'what you see now' probability) as the reference: 0 = no better than the "
       "reference, 1 = perfect.", "K")}
@@ -228,17 +227,20 @@ KEY = f"""
       f"reaches {v(ab('no_station_info', 'classic'))} / {v(ab('no_station_info', 'ebike'))}.", "K")}
 4. {d(f"The model helps most on the last bike: skill {v(grp(BC, 'classic', '1'))} / {v(grp(BC, 'ebike', '1'))} "
       f"with one bike now, against {v(grp(BC, 'classic', '6+'))} / {v(grp(BC, 'ebike', '6+'))} with 6 or more.", "K")}
-5. {d(f"The gain over the reference grows with the horizon, from {v(grp(BH, 'classic', 2))} / {v(grp(BH, 'ebike', 2))} "
-      f"at h = 2 min to {v(grp(BH, 'classic', 14))} / {v(grp(BH, 'ebike', 14))} at h = 14 min. The forecast "
-      f"itself gets less accurate further ahead (Brier {v(grp(BH, 'classic', 2, k='brier'), 4)} to "
-      f"{v(grp(BH, 'classic', 14, k='brier'), 4)}, classic), but the reference degrades faster.", "K")}
+5. {d(f"Skill grows with the horizon, from {v(grp(BH, 'classic', 2))} / {v(grp(BH, 'ebike', 2))} at h = 2 min "
+      f"to {v(grp(BH, 'classic', 14))} / {v(grp(BH, 'ebike', 14))} at h = 14 min. This is skill relative to the "
+      f"reference, not accuracy: the forecast itself gets less accurate further ahead (Brier "
+      f"{v(grp(BH, 'classic', 2, k='brier'), 4)} to {v(grp(BH, 'classic', 14, k='brier'), 4)}, classic), and the "
+      f"reference loses accuracy faster ({v(grp(BH, 'classic', 2, model='calibrated persistence', k='brier'), 4)} to "
+      f"{v(grp(BH, 'classic', 14, model='calibrated persistence', k='brier'), 4)}).", "K")}
 
 **How well it carries over, and what comes next**
 
 6. {d(f"Test is lower than validation: {v(t_all['classic'])} / {v(t_all['ebike'])} against "
       f"{v(v_all['classic'])} / {v(v_all['ebike'])}. The test days include a weekend and the validation days do "
       f"not; leaving the weekend out closes {pct(wk_share['classic'])} / {pct(wk_share['ebike'])} of the gap, so "
-      "the weekend is about a third of the drop.", "K")}
+      "the weekend is about a third of the drop. Data v2 is already built with a validation week and a test "
+      "week of 5 weekdays and 2 weekend days each, so the model is chosen on days that include a weekend.", "K")}
 7. {d(f"More training data helps, with a slowing gain (earlier count model, MSE skill, data-v1): "
       f"{v(ds.loc[5, 'classic_all_mean'])} with 5 training days, {v(ds.loc[10, 'classic_all_mean'])} with 10, "
       f"{v(ds.loc[20, 'classic_all_mean'])} with 20 (classic); about "
@@ -246,7 +248,28 @@ KEY = f"""
       f"and +{v(DSL.loc[('dropout 0.1', 'classic_all'), 'slope_per_7_days_15_to_20'])} over 15–20. "
       "Data v2 (more days) tests this on the probability model.", "K")}
 """
+FIGS = [
+    ("key_station.png", "Figure K-a (finding 3)", "Knowing the station gives most of the gain: LightGBM on growing input "
+     "sets (val, seed 0); location and capacity alone recover almost all of it."),
+    ("prob_where.png", "Figure K-b (findings 4 and 5)", "The gain is largest with one bike left (left) and grows with "
+     "the horizon (right); val, mean over seeds 0–2."),
+    ("key_horizon.png", "Figure K-c (finding 5)", "Both forecasts get less accurate further ahead; the reference "
+     "degrades faster, so the skill grows (val, Brier, lower is better)."),
+    ("key_days.png", "Figure K-d (finding 6)", "The weekend days score lowest, and the test weekdays are also below "
+     "the validation days (Oct 28, a partial test day of 76,559 rows, is left out)."),
+    ("data_size.png", "Figure K-e (finding 7)", "More training days raise the validation skill, with a slowing gain "
+     "(count model, skill = 1 − MSE_model / MSE_persistence, data-v1, mean ± sd over seeds 0–2)."),
+]
+FIG_CAPS = [f"**{name}.** {d(text, 'K')}" for _, name, text in FIGS]
 md(KEY)
+for (fname, _, _), cap in zip(FIGS, FIG_CAPS):
+    code(f"""
+from pathlib import Path
+from IPython.display import Image, display
+ROOT = Path.cwd().parent if Path.cwd().name == "notebooks" else Path.cwd()
+display(Image(filename=str(ROOT / "reports" / "figures" / "{fname}"), width=850))
+""", hide=True)
+    md(cap)
 
 code("""
 import json
@@ -688,7 +711,14 @@ if __name__ == "__main__":
     body, _ = exporter.from_notebook_node(nb, resources={"metadata": {"name": "Will there be a bike? Progress report"}})
     OUT.with_suffix(".html").write_text(body)
     print("wrote", OUT, "and", OUT.with_suffix(".html"))
-    kn = nbformat.v4.new_notebook(cells=[nbformat.v4.new_markdown_cell(KEY.strip())])
+    import base64
+    figcells = []
+    for (fname, _, _), cap in zip(FIGS, FIG_CAPS):
+        c = nbformat.v4.new_markdown_cell(f"![{fname}](attachment:{fname})\n\n" + cap)
+        c.attachments = {fname: {"image/png": base64.b64encode(
+            (ROOT / "reports" / "figures" / fname).read_bytes()).decode()}}
+        figcells.append(c)
+    kn = nbformat.v4.new_notebook(cells=[nbformat.v4.new_markdown_cell(KEY.strip()), *figcells])
     kn.metadata["kernelspec"] = nb.metadata["kernelspec"]
     nbformat.write(kn, OUT.with_name("key_findings.ipynb"))
     print("wrote", OUT.with_name("key_findings.ipynb"))
