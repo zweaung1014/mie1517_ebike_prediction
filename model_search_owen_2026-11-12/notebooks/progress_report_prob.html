@@ -7796,7 +7796,7 @@ a.anchor-link {
 <!-- End of mermaid configuration --></head>
 <body class="jp-Notebook" data-jp-theme-light="true" data-jp-theme-name="JupyterLab Light">
 <main>
-<div class="jp-Cell jp-MarkdownCell jp-Notebook-cell" id="cell-id=e19bf8c4">
+<div class="jp-Cell jp-MarkdownCell jp-Notebook-cell" id="cell-id=6fb8bf35">
 <div class="jp-Cell-inputWrapper" tabindex="0">
 <div class="jp-Collapser jp-InputCollapser jp-Cell-inputCollapser">
 </div>
@@ -7813,9 +7813,35 @@ checked. Every number is printed from a table written by a script of the project
 </div>
 </div>
 </div>
-</div><div class="jp-Cell jp-CodeCell jp-Notebook-cell jp-mod-noOutputs celltag_hide-input" id="cell-id=8a8a7583">
 </div>
-<div class="jp-Cell jp-MarkdownCell jp-Notebook-cell" id="cell-id=632bdb8c">
+<div class="jp-Cell jp-MarkdownCell jp-Notebook-cell" id="cell-id=bd9a879f">
+<div class="jp-Cell-inputWrapper" tabindex="0">
+<div class="jp-Collapser jp-InputCollapser jp-Cell-inputCollapser">
+</div>
+<div class="jp-InputArea jp-Cell-inputArea"><div class="jp-InputPrompt jp-InputArea-prompt">
+</div><div class="jp-RenderedHTMLCommon jp-RenderedMarkdown jp-MarkdownOutput" data-mime-type="text/markdown">
+<h2 id="Key-findings">Key findings<a class="anchor-link" href="#Key-findings">¶</a></h2><p><strong>What we predict and how we score it</strong></p>
+<ol>
+<li><span style="color:#1f5fbf">[K1] We predict P(at least one bike at t + h) for each bike type, because whether a bike is there is what a rider needs to know.</span></li>
+<li><span style="color:#1f5fbf">[K2] The score is the skill against a reference forecast, skill = 1 − Brier_model / Brier_ref, with calibrated persistence (an honest 'what you see now' probability) as the reference: 0 = no better than the reference, 1 = perfect.</span></li>
+</ol>
+<p><strong>What the model learns, and where it helps (validation days)</strong></p>
+<ol start="3">
+<li><span style="color:#1f5fbf">[K3] Knowing the station matters most: the chosen model, which knows it, reaches 0.154 / 0.117 (classic / e-bike); LightGBM without any station information reaches 0.090 / 0.071.</span></li>
+<li><span style="color:#1f5fbf">[K4] The model helps most on the last bike: skill 0.182 / 0.159 with one bike now, against 0.038 / 0.039 with 6 or more.</span></li>
+<li><span style="color:#1f5fbf">[K5] The gain over the reference grows with the horizon, from 0.079 / 0.058 at h = 2 min to 0.177 / 0.143 at h = 14 min. The forecast itself gets less accurate further ahead (Brier 0.0103 to 0.0283, classic), but the reference degrades faster.</span></li>
+</ol>
+<p><strong>How well it carries over, and what comes next</strong></p>
+<ol start="6">
+<li><span style="color:#1f5fbf">[K6] Test is lower than validation: 0.125 / 0.092 against 0.154 / 0.117. The test days include a weekend and the validation days do not; leaving the weekend out closes 29 % / 39 % of the gap, so the weekend is about a third of the drop.</span></li>
+<li><span style="color:#1f5fbf">[K7] More training data helps, with a slowing gain (earlier count model, MSE skill, data-v1): 0.072 with 5 training days, 0.083 with 10, 0.109 with 20 (classic); about +0.019 per extra week over 10–20 days and +0.009 over 15–20. Data v2 (more days) tests this on the probability model.</span></li>
+</ol>
+</div>
+</div>
+</div>
+</div><div class="jp-Cell jp-CodeCell jp-Notebook-cell jp-mod-noOutputs celltag_hide-input" id="cell-id=db35574b">
+</div>
+<div class="jp-Cell jp-MarkdownCell jp-Notebook-cell" id="cell-id=4fb51c14">
 <div class="jp-Cell-inputWrapper" tabindex="0">
 <div class="jp-Collapser jp-InputCollapser jp-Cell-inputCollapser">
 </div>
@@ -7829,7 +7855,7 @@ whose 'at least one bike' status differs between t and t + h.
 </div>
 </div>
 </div>
-</div><div class="jp-Cell jp-CodeCell jp-Notebook-cell celltag_hide-input" id="cell-id=e431d168">
+</div><div class="jp-Cell jp-CodeCell jp-Notebook-cell celltag_hide-input" id="cell-id=dc7f8b2c">
 <div class="jp-Cell-outputWrapper">
 <div class="jp-Collapser jp-OutputCollapser jp-Cell-outputCollapser">
 </div>
@@ -7918,7 +7944,7 @@ whose 'at least one bike' status differs between t and t + h.
 </div>
 </div>
 </div>
-<div class="jp-Cell jp-MarkdownCell jp-Notebook-cell" id="cell-id=90451380">
+<div class="jp-Cell jp-MarkdownCell jp-Notebook-cell" id="cell-id=cbf23bf4">
 <div class="jp-Cell-inputWrapper" tabindex="0">
 <div class="jp-Collapser jp-InputCollapser jp-Cell-inputCollapser">
 </div>
@@ -7928,7 +7954,7 @@ whose 'at least one bike' status differs between t and t + h.
 </div>
 </div>
 </div>
-</div><div class="jp-Cell jp-CodeCell jp-Notebook-cell celltag_hide-input" id="cell-id=80adea53">
+</div><div class="jp-Cell jp-CodeCell jp-Notebook-cell celltag_hide-input" id="cell-id=4d4e4919">
 <div class="jp-Cell-outputWrapper">
 <div class="jp-Collapser jp-OutputCollapser jp-Cell-outputCollapser">
 </div>
@@ -8045,7 +8071,7 @@ whose 'at least one bike' status differs between t and t + h.
 </div>
 </div>
 </div>
-</div><div class="jp-Cell jp-CodeCell jp-Notebook-cell celltag_hide-input" id="cell-id=30acd43b">
+</div><div class="jp-Cell jp-CodeCell jp-Notebook-cell celltag_hide-input" id="cell-id=e43d7ddf">
 <div class="jp-Cell-outputWrapper">
 <div class="jp-Collapser jp-OutputCollapser jp-Cell-outputCollapser">
 </div>
@@ -8059,7 +8085,7 @@ whose 'at least one bike' status differs between t and t + h.
 </div>
 </div>
 </div>
-<div class="jp-Cell jp-MarkdownCell jp-Notebook-cell" id="cell-id=a93c805a">
+<div class="jp-Cell jp-MarkdownCell jp-Notebook-cell" id="cell-id=805210b7">
 <div class="jp-Cell-inputWrapper" tabindex="0">
 <div class="jp-Collapser jp-InputCollapser jp-Cell-inputCollapser">
 </div>
@@ -8068,7 +8094,7 @@ whose 'at least one bike' status differs between t and t + h.
 <h2 id="2.-Task-and-score">2. Task and score<a class="anchor-link" href="#2.-Task-and-score">¶</a></h2><p><strong>Output.</strong> For each bike type, p = P(at least one bike at t + h), h = 2–15 min. One model covers all stations
 and horizons (h is an input). Loss: binary cross-entropy.
 <span style="color:#1f5fbf">[D6] We moved from forecasting the count (with MSE) to this probability because a rider's question is 'will there be a bike?', and a probability says how sure the answer is.</span>
-<span style="color:#c00000">[C2] This replaces the team's count / MSE direction of Oct 28; the team has not confirmed it yet.</span></p>
+<span style="color:#c00000">[C2] This replaces the team's count / MSE direction of Oct 28; the team agreed to the change at its Nov 12 meeting.</span></p>
 <p><strong>Score.</strong> The Brier score, mean (p − y)², and the Brier skill score against a reference,
 BSS = 1 − Brier_model / Brier_ref (0 = no better than the reference, 1 = perfect).
 <span style="color:#1f5fbf">[D7] We do not use log loss against persistence: persistence says 0 or 1, so every miss costs log(0) = infinity. The Brier score is finite for 0/1 forecasts and is still a proper score.</span></p>
@@ -8104,7 +8130,7 @@ BSS = 1 − Brier_model / Brier_ref (0 = no better than the reference, 1 = perfe
 </div>
 </div>
 </div>
-<div class="jp-Cell jp-MarkdownCell jp-Notebook-cell" id="cell-id=ec5ac896">
+<div class="jp-Cell jp-MarkdownCell jp-Notebook-cell" id="cell-id=2752de58">
 <div class="jp-Cell-inputWrapper" tabindex="0">
 <div class="jp-Collapser jp-InputCollapser jp-Cell-inputCollapser">
 </div>
@@ -8119,7 +8145,7 @@ BSS = 1 − Brier_model / Brier_ref (0 = no better than the reference, 1 = perfe
 </div>
 </div>
 </div>
-<div class="jp-Cell jp-MarkdownCell jp-Notebook-cell" id="cell-id=b7de38e0">
+<div class="jp-Cell jp-MarkdownCell jp-Notebook-cell" id="cell-id=869871c6">
 <div class="jp-Cell-inputWrapper" tabindex="0">
 <div class="jp-Collapser jp-InputCollapser jp-Cell-inputCollapser">
 </div>
@@ -8133,7 +8159,7 @@ BSS = 1 − Brier_model / Brier_ref (0 = no better than the reference, 1 = perfe
 </div>
 </div>
 </div>
-<div class="jp-Cell jp-MarkdownCell jp-Notebook-cell" id="cell-id=706a57d4">
+<div class="jp-Cell jp-MarkdownCell jp-Notebook-cell" id="cell-id=07994e63">
 <div class="jp-Cell-inputWrapper" tabindex="0">
 <div class="jp-Collapser jp-InputCollapser jp-Cell-inputCollapser">
 </div>
@@ -8175,7 +8201,7 @@ BSS = 1 − Brier_model / Brier_ref (0 = no better than the reference, 1 = perfe
 </div>
 </div>
 </div>
-<div class="jp-Cell jp-MarkdownCell jp-Notebook-cell" id="cell-id=f40deac0">
+<div class="jp-Cell jp-MarkdownCell jp-Notebook-cell" id="cell-id=f08ff99b">
 <div class="jp-Cell-inputWrapper" tabindex="0">
 <div class="jp-Collapser jp-InputCollapser jp-Cell-inputCollapser">
 </div>
@@ -8187,7 +8213,7 @@ BSS = 1 − Brier_model / Brier_ref (0 = no better than the reference, 1 = perfe
 </div>
 </div>
 </div>
-<div class="jp-Cell jp-MarkdownCell jp-Notebook-cell" id="cell-id=ff3082e9">
+<div class="jp-Cell jp-MarkdownCell jp-Notebook-cell" id="cell-id=39b6e9da">
 <div class="jp-Cell-inputWrapper" tabindex="0">
 <div class="jp-Collapser jp-InputCollapser jp-Cell-inputCollapser">
 </div>
@@ -8202,7 +8228,7 @@ BSS = 1 − Brier_model / Brier_ref (0 = no better than the reference, 1 = perfe
 </div>
 </div>
 </div>
-<div class="jp-Cell jp-MarkdownCell jp-Notebook-cell" id="cell-id=59db50c7">
+<div class="jp-Cell jp-MarkdownCell jp-Notebook-cell" id="cell-id=b5521d2d">
 <div class="jp-Cell-inputWrapper" tabindex="0">
 <div class="jp-Collapser jp-InputCollapser jp-Cell-inputCollapser">
 </div>
@@ -8244,7 +8270,7 @@ BSS = 1 − Brier_model / Brier_ref (0 = no better than the reference, 1 = perfe
 </div>
 </div>
 </div>
-<div class="jp-Cell jp-MarkdownCell jp-Notebook-cell" id="cell-id=b47f6053">
+<div class="jp-Cell jp-MarkdownCell jp-Notebook-cell" id="cell-id=a07d068d">
 <div class="jp-Cell-inputWrapper" tabindex="0">
 <div class="jp-Collapser jp-InputCollapser jp-Cell-inputCollapser">
 </div>
@@ -8273,7 +8299,7 @@ validation cross-entropy; stop after 3 epochs without improvement.</p>
 </div>
 </div>
 </div>
-<div class="jp-Cell jp-MarkdownCell jp-Notebook-cell" id="cell-id=5c947dd6">
+<div class="jp-Cell jp-MarkdownCell jp-Notebook-cell" id="cell-id=039b8363">
 <div class="jp-Cell-inputWrapper" tabindex="0">
 <div class="jp-Collapser jp-InputCollapser jp-Cell-inputCollapser">
 </div>
@@ -8286,7 +8312,7 @@ Validation: Oct 19–23. The rule to pick the model was fixed before any run: th
 </div>
 </div>
 </div>
-</div><div class="jp-Cell jp-CodeCell jp-Notebook-cell celltag_hide-input" id="cell-id=4ed4d1f3">
+</div><div class="jp-Cell jp-CodeCell jp-Notebook-cell celltag_hide-input" id="cell-id=ed21ff65">
 <div class="jp-Cell-outputWrapper">
 <div class="jp-Collapser jp-OutputCollapser jp-Cell-outputCollapser">
 </div>
@@ -8404,7 +8430,7 @@ and against the station-hour look-up (classic / e-bike)
 </div>
 </div>
 </div>
-</div><div class="jp-Cell jp-CodeCell jp-Notebook-cell celltag_hide-input" id="cell-id=0484bf26">
+</div><div class="jp-Cell jp-CodeCell jp-Notebook-cell celltag_hide-input" id="cell-id=33b70b0f">
 <div class="jp-Cell-outputWrapper">
 <div class="jp-Collapser jp-OutputCollapser jp-Cell-outputCollapser">
 </div>
@@ -8422,7 +8448,7 @@ chosen by the rule: MLP 2x256, dropout 0.3
 </div>
 </div>
 </div>
-</div><div class="jp-Cell jp-CodeCell jp-Notebook-cell celltag_hide-input" id="cell-id=431649a1">
+</div><div class="jp-Cell jp-CodeCell jp-Notebook-cell celltag_hide-input" id="cell-id=a22ff6ab">
 <div class="jp-Cell-outputWrapper">
 <div class="jp-Collapser jp-OutputCollapser jp-Cell-outputCollapser">
 </div>
@@ -8436,7 +8462,7 @@ chosen by the rule: MLP 2x256, dropout 0.3
 </div>
 </div>
 </div>
-<div class="jp-Cell jp-MarkdownCell jp-Notebook-cell" id="cell-id=5e59a088">
+<div class="jp-Cell jp-MarkdownCell jp-Notebook-cell" id="cell-id=641bb8ad">
 <div class="jp-Cell-inputWrapper" tabindex="0">
 <div class="jp-Collapser jp-InputCollapser jp-Cell-inputCollapser">
 </div>
@@ -8447,7 +8473,7 @@ chosen by the rule: MLP 2x256, dropout 0.3
 </div>
 </div>
 </div>
-</div><div class="jp-Cell jp-CodeCell jp-Notebook-cell celltag_hide-input" id="cell-id=7c9f10b4">
+</div><div class="jp-Cell jp-CodeCell jp-Notebook-cell celltag_hide-input" id="cell-id=76f3e65e">
 <div class="jp-Cell-outputWrapper">
 <div class="jp-Collapser jp-OutputCollapser jp-Cell-outputCollapser">
 </div>
@@ -8528,7 +8554,7 @@ chosen by the rule: MLP 2x256, dropout 0.3
 </div>
 </div>
 </div>
-<div class="jp-Cell jp-MarkdownCell jp-Notebook-cell" id="cell-id=6fa6f422">
+<div class="jp-Cell jp-MarkdownCell jp-Notebook-cell" id="cell-id=044fb6c5">
 <div class="jp-Cell-inputWrapper" tabindex="0">
 <div class="jp-Collapser jp-InputCollapser jp-Cell-inputCollapser">
 </div>
@@ -8540,7 +8566,7 @@ chosen by the rule: MLP 2x256, dropout 0.3
 </div>
 </div>
 </div>
-<div class="jp-Cell jp-MarkdownCell jp-Notebook-cell" id="cell-id=5d35a959">
+<div class="jp-Cell jp-MarkdownCell jp-Notebook-cell" id="cell-id=8ed7af8f">
 <div class="jp-Cell-inputWrapper" tabindex="0">
 <div class="jp-Collapser jp-InputCollapser jp-Cell-inputCollapser">
 </div>
@@ -8550,7 +8576,7 @@ chosen by the rule: MLP 2x256, dropout 0.3
 </div>
 </div>
 </div>
-</div><div class="jp-Cell jp-CodeCell jp-Notebook-cell celltag_hide-input" id="cell-id=c9f06705">
+</div><div class="jp-Cell jp-CodeCell jp-Notebook-cell celltag_hide-input" id="cell-id=bd19ef23">
 <div class="jp-Cell-outputWrapper">
 <div class="jp-Collapser jp-OutputCollapser jp-Cell-outputCollapser">
 </div>
@@ -8564,19 +8590,19 @@ chosen by the rule: MLP 2x256, dropout 0.3
 </div>
 </div>
 </div>
-<div class="jp-Cell jp-MarkdownCell jp-Notebook-cell" id="cell-id=42b4736d">
+<div class="jp-Cell jp-MarkdownCell jp-Notebook-cell" id="cell-id=b4eb4f6b">
 <div class="jp-Cell-inputWrapper" tabindex="0">
 <div class="jp-Collapser jp-InputCollapser jp-Cell-inputCollapser">
 </div>
 <div class="jp-InputArea jp-Cell-inputArea"><div class="jp-InputPrompt jp-InputArea-prompt">
 </div><div class="jp-RenderedHTMLCommon jp-RenderedMarkdown jp-MarkdownOutput" data-mime-type="text/markdown">
-<p><span style="color:#1f5fbf">[D14] Measured as skill, the model helps most when one bike is left: BSS 0.182 (classic) and 0.159 (e-bike) against calibrated persistence, against 0.038 / 0.039 with 6 or more bikes (on test: 0.145 / 0.123 at one bike). Stations with no bike now matter as much for classic bikes: there the question is whether a bike will arrive. The gain also grows with the horizon, from 0.079 / 0.058 at h = 2 min to 0.177 / 0.143 at h = 14 min (hypothesis: the further ahead, the more the count now leaves open).</span>
+<p><span style="color:#1f5fbf">[D14] Measured as skill, the model helps most when one bike is left: BSS 0.182 (classic) and 0.159 (e-bike) against calibrated persistence, against 0.038 / 0.039 with 6 or more bikes (on test: 0.145 / 0.123 at one bike). Stations with no bike now matter as much for classic bikes: there the question is whether a bike will arrive. The gain also grows with the horizon, from 0.079 / 0.058 at h = 2 min to 0.177 / 0.143 at h = 14 min. The forecast itself gets less accurate with h (Brier 0.0103 to 0.0283, classic), but calibrated persistence degrades faster (0.0112 to 0.0344), so the gain over it grows.</span>
 <span style="color:#1f5fbf">[D15] Share of the total Brier reduction against calibrated persistence: rows with 0 bikes now give 46 % (classic) / 37 % (e-bike), rows with 1 bike 47 % / 59 %.</span></p>
 <p><span style="color:#1f5fbf">[D16] In rider terms (validation only): when one bike is there now, it is gone by t + h in 7.6 % of cases (classic; 9.2 % for e-bikes). A warning on the 10 % of these cases with the lowest forecast would catch 48 % of the times the bike is gone (41 % for e-bikes), and be right 36 % / 37 % of the time, so about 2 in 3 warnings would be false alarms. Ranking within each horizon gives nearly the same catch (46 % / 38 %). The same warning from calibrated persistence catches 13 % / 14 %, and from the station-hour look-up 43 % / 36 %. The base MLP and LightGBM catch about as much as the chosen model, so this is a property of the models that know the station, not of this one.</span></p>
 </div>
 </div>
 </div>
-</div><div class="jp-Cell jp-CodeCell jp-Notebook-cell celltag_hide-input" id="cell-id=b144068d">
+</div><div class="jp-Cell jp-CodeCell jp-Notebook-cell celltag_hide-input" id="cell-id=ee6a54d8">
 <div class="jp-Cell-outputWrapper">
 <div class="jp-Collapser jp-OutputCollapser jp-Cell-outputCollapser">
 </div>
@@ -8590,7 +8616,7 @@ chosen by the rule: MLP 2x256, dropout 0.3
 </div>
 </div>
 </div>
-<div class="jp-Cell jp-MarkdownCell jp-Notebook-cell" id="cell-id=9a23a78b">
+<div class="jp-Cell jp-MarkdownCell jp-Notebook-cell" id="cell-id=97189d5e">
 <div class="jp-Cell-inputWrapper" tabindex="0">
 <div class="jp-Collapser jp-InputCollapser jp-Cell-inputCollapser">
 </div>
@@ -8601,7 +8627,7 @@ chosen by the rule: MLP 2x256, dropout 0.3
 </div>
 </div>
 </div>
-<div class="jp-Cell jp-MarkdownCell jp-Notebook-cell" id="cell-id=791ef518">
+<div class="jp-Cell jp-MarkdownCell jp-Notebook-cell" id="cell-id=07462eb5">
 <div class="jp-Cell-inputWrapper" tabindex="0">
 <div class="jp-Collapser jp-InputCollapser jp-Cell-inputCollapser">
 </div>
@@ -8611,7 +8637,7 @@ chosen by the rule: MLP 2x256, dropout 0.3
 </div>
 </div>
 </div>
-</div><div class="jp-Cell jp-CodeCell jp-Notebook-cell celltag_hide-input" id="cell-id=c97f5a5c">
+</div><div class="jp-Cell jp-CodeCell jp-Notebook-cell celltag_hide-input" id="cell-id=d509161a">
 <div class="jp-Cell-outputWrapper">
 <div class="jp-Collapser jp-OutputCollapser jp-Cell-outputCollapser">
 </div>
@@ -8632,7 +8658,7 @@ calibrated persistence   ebike 0.0352              0.0572             0.0000
 </div>
 </div>
 </div>
-</div><div class="jp-Cell jp-CodeCell jp-Notebook-cell celltag_hide-input" id="cell-id=43aa268b">
+</div><div class="jp-Cell jp-CodeCell jp-Notebook-cell celltag_hide-input" id="cell-id=3baee5ba">
 <div class="jp-Cell-outputWrapper">
 <div class="jp-Collapser jp-OutputCollapser jp-Cell-outputCollapser">
 </div>
@@ -8645,7 +8671,7 @@ calibrated persistence   ebike 0.0352              0.0572             0.0000
 </div>
 </div>
 </div>
-</div><div class="jp-Cell jp-CodeCell jp-Notebook-cell celltag_hide-input" id="cell-id=5cde123c">
+</div><div class="jp-Cell jp-CodeCell jp-Notebook-cell celltag_hide-input" id="cell-id=9d4f0dd6">
 <div class="jp-Cell-outputWrapper">
 <div class="jp-Collapser jp-OutputCollapser jp-Cell-outputCollapser">
 </div>
@@ -8798,7 +8824,7 @@ calibrated persistence   ebike 0.0352              0.0572             0.0000
 </div>
 </div>
 </div>
-<div class="jp-Cell jp-MarkdownCell jp-Notebook-cell" id="cell-id=1f12128a">
+<div class="jp-Cell jp-MarkdownCell jp-Notebook-cell" id="cell-id=0933ae8a">
 <div class="jp-Cell-inputWrapper" tabindex="0">
 <div class="jp-Collapser jp-InputCollapser jp-Cell-inputCollapser">
 </div>
@@ -8811,7 +8837,7 @@ calibrated persistence   ebike 0.0352              0.0572             0.0000
 </div>
 </div>
 </div>
-<div class="jp-Cell jp-MarkdownCell jp-Notebook-cell" id="cell-id=c67a5f0f">
+<div class="jp-Cell jp-MarkdownCell jp-Notebook-cell" id="cell-id=1b8cb7a1">
 <div class="jp-Cell-inputWrapper" tabindex="0">
 <div class="jp-Collapser jp-InputCollapser jp-Cell-inputCollapser">
 </div>
@@ -8821,7 +8847,7 @@ calibrated persistence   ebike 0.0352              0.0572             0.0000
 </div>
 </div>
 </div>
-</div><div class="jp-Cell jp-CodeCell jp-Notebook-cell celltag_hide-input" id="cell-id=bb2e0530">
+</div><div class="jp-Cell jp-CodeCell jp-Notebook-cell celltag_hide-input" id="cell-id=0a299001">
 <div class="jp-Cell-outputWrapper">
 <div class="jp-Collapser jp-OutputCollapser jp-Cell-outputCollapser">
 </div>
@@ -8840,7 +8866,7 @@ mlp       0.070  0.077
 </div>
 </div>
 </div>
-<div class="jp-Cell jp-MarkdownCell jp-Notebook-cell" id="cell-id=e448a0d9">
+<div class="jp-Cell jp-MarkdownCell jp-Notebook-cell" id="cell-id=c8d3a745">
 <div class="jp-Cell-inputWrapper" tabindex="0">
 <div class="jp-Collapser jp-InputCollapser jp-Cell-inputCollapser">
 </div>

@@ -22,7 +22,7 @@ Read first:
 
 The same data, split, inputs and horizons, with a new output: the probability that at least one bike of each
 type (classic, e-bike) is at the station at t + h, trained with binary cross-entropy. Details:
-`reports/MODEL_SEARCH_PROB.md`; the progress-report notebook is `notebooks/progress_report_prob.ipynb` (+ `.html`).
+`reports/MODEL_SEARCH_PROB.md`; the progress-report notebook is `notebooks/progress_report_prob.ipynb` (+ `.html`). Key findings (13 Nov), grouped and ready to paste into the team notebook: `notebooks/key_findings.ipynb`.
 
 - **Score:** Brier skill score BSS = 1 − Brier_model / Brier_ref against three references fit on train:
   persistence (1 if a bike is there now), calibrated persistence (P(bike at t + h | count now, h)) and a
@@ -119,7 +119,7 @@ src/score_prob.py      probability score: Brier, BSS, references, calibration, o
        └─ src/49_progress_notebook.py  progress-report notebook
        └─ src/50_prob_checks.py    checks after the reviews (patience, day types, flags, climatology, sample)
 reports/   MODEL_SEARCH.md, MODEL_SEARCH_PROB.md, MEETING_2026-11-12.md / .pdf, tables/*.csv, figures/*.png
-notebooks/ model_search_trace.ipynb / .html, progress_report_prob.ipynb / .html
+notebooks/ model_search_trace.ipynb / .html, progress_report_prob.ipynb / .html, key_findings.ipynb
 ```
 
 Not included: raw data, the training table and model weights. The weights can be rebuilt with `37_model_search.py --save`.

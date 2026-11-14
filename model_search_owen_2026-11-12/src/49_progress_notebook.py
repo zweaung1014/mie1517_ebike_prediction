@@ -30,7 +30,7 @@ ms = importlib.import_module("37_model_search")
 T = ROOT / "reports" / "tables"
 OUT = ROOT / "notebooks" / "progress_report_prob.ipynb"
 CELLS, TAGS = [], []
-N = {"D": 0, "C": 0}
+N = {"D": 0, "C": 0, "K": 0}
 LABEL = {"mlp_2x64_e8": "MLP 2×64 (base)", "mlp_2x256_do0.1": "MLP 2×256, dropout 0.1",
          "mlp_2x256_do0.3": "MLP 2×256, dropout 0.3", "gru64_3x256_do0.1": "GRU + 3×256, dropout 0.1",
          "lgbm": "LightGBM", "logreg": "logistic regression"}
@@ -60,7 +60,7 @@ def d(text, kind="D"):
     N[kind] += 1
     tag = f"{kind}{N[kind]}"
     TAGS.append((tag, " ".join(text.split()[:14])))
-    color = "#1f5fbf" if kind == "D" else "#c00000"
+    color = "#c00000" if kind == "C" else "#1f5fbf"
     return f'<span style="color:{color}">[{tag}] {" ".join(text.split())}</span>'
 
 
@@ -206,6 +206,48 @@ All prose below is a draft: blue text marked [Dn] is draft text, red text marked
 checked. Every number is printed from a table written by a script of the project.
 """)
 
+# ---------------------------------------------------------------- key findings (Owen, Nov 13), grouped
+DS = pd.read_csv(T / "data_size_summary.csv")
+DSL = pd.read_csv(T / "data_size_slope.csv").set_index(["dropout", "column"])
+ds = DS[DS.dropout == "dropout 0.1"].set_index("train_days")
+KEY = f"""
+## Key findings
+
+**What we predict and how we score it**
+
+1. {d("We predict P(at least one bike at t + h) for each bike type, because whether a bike is there is what a "
+      "rider needs to know.", "K")}
+2. {d("The score is the skill against a reference forecast, skill = 1 − Brier_model / Brier_ref, with calibrated "
+      "persistence (an honest 'what you see now' probability) as the reference: 0 = no better than the "
+      "reference, 1 = perfect.", "K")}
+
+**What the model learns, and where it helps (validation days)**
+
+3. {d(f"Knowing the station matters most: the chosen model, which knows it, reaches {v(s(C, 'classic', 'all', 'bss_calpers'))} / "
+      f"{v(s(C, 'ebike', 'all', 'bss_calpers'))} (classic / e-bike); LightGBM without any station information "
+      f"reaches {v(ab('no_station_info', 'classic'))} / {v(ab('no_station_info', 'ebike'))}.", "K")}
+4. {d(f"The model helps most on the last bike: skill {v(grp(BC, 'classic', '1'))} / {v(grp(BC, 'ebike', '1'))} "
+      f"with one bike now, against {v(grp(BC, 'classic', '6+'))} / {v(grp(BC, 'ebike', '6+'))} with 6 or more.", "K")}
+5. {d(f"The gain over the reference grows with the horizon, from {v(grp(BH, 'classic', 2))} / {v(grp(BH, 'ebike', 2))} "
+      f"at h = 2 min to {v(grp(BH, 'classic', 14))} / {v(grp(BH, 'ebike', 14))} at h = 14 min. The forecast "
+      f"itself gets less accurate further ahead (Brier {v(grp(BH, 'classic', 2, k='brier'), 4)} to "
+      f"{v(grp(BH, 'classic', 14, k='brier'), 4)}, classic), but the reference degrades faster.", "K")}
+
+**How well it carries over, and what comes next**
+
+6. {d(f"Test is lower than validation: {v(t_all['classic'])} / {v(t_all['ebike'])} against "
+      f"{v(v_all['classic'])} / {v(v_all['ebike'])}. The test days include a weekend and the validation days do "
+      f"not; leaving the weekend out closes {pct(wk_share['classic'])} / {pct(wk_share['ebike'])} of the gap, so "
+      "the weekend is about a third of the drop.", "K")}
+7. {d(f"More training data helps, with a slowing gain (earlier count model, MSE skill, data-v1): "
+      f"{v(ds.loc[5, 'classic_all_mean'])} with 5 training days, {v(ds.loc[10, 'classic_all_mean'])} with 10, "
+      f"{v(ds.loc[20, 'classic_all_mean'])} with 20 (classic); about "
+      f"+{v(DSL.loc[('dropout 0.1', 'classic_all'), 'slope_per_7_days_10_to_20'])} per extra week over 10–20 days "
+      f"and +{v(DSL.loc[('dropout 0.1', 'classic_all'), 'slope_per_7_days_15_to_20'])} over 15–20. "
+      "Data v2 (more days) tests this on the probability model.", "K")}
+"""
+md(KEY)
+
 code("""
 import json
 from pathlib import Path
@@ -269,7 +311,7 @@ md(f"""
 and horizons (h is an input). Loss: binary cross-entropy.
 {d("We moved from forecasting the count (with MSE) to this probability because a rider's question is "
    "'will there be a bike?', and a probability says how sure the answer is.")}
-{d("This replaces the team's count / MSE direction of Oct 28; the team has not confirmed it yet.", "C")}
+{d("This replaces the team's count / MSE direction of Oct 28; the team agreed to the change at its Nov 12 meeting.", "C")}
 
 **Score.** The Brier score, mean (p − y)², and the Brier skill score against a reference,
 BSS = 1 − Brier_model / Brier_ref (0 = no better than the reference, 1 = perfect).
@@ -457,7 +499,10 @@ md(f"""
    f"{v(grp(TBC, 'ebike', '1'))} at one bike). Stations with no bike now matter as much for classic bikes: there "
    f"the question is whether a bike will arrive. The gain also grows with the horizon, from "
    f"{v(grp(BH, 'classic', 2))} / {v(grp(BH, 'ebike', 2))} at h = 2 min to {v(grp(BH, 'classic', 14))} / "
-   f"{v(grp(BH, 'ebike', 14))} at h = 14 min (hypothesis: the further ahead, the more the count now leaves open).")}
+   f"{v(grp(BH, 'ebike', 14))} at h = 14 min. The forecast itself gets less accurate with h (Brier {v(grp(BH, 'classic', 2, k='brier'), 4)} to "
+   f"{v(grp(BH, 'classic', 14, k='brier'), 4)}, classic), but calibrated persistence degrades faster "
+   f"({v(grp(BH, 'classic', 2, model='calibrated persistence', k='brier'), 4)} to "
+   f"{v(grp(BH, 'classic', 14, model='calibrated persistence', k='brier'), 4)}), so the gain over it grows.")}
 {d(f"Share of the total Brier reduction against calibrated persistence: rows with 0 bikes now give "
    f"{pct(share('classic', '0'))} (classic) / {pct(share('ebike', '0'))} (e-bike), rows with 1 bike "
    f"{pct(share('classic', '1'))} / {pct(share('ebike', '1'))}.")}
@@ -643,6 +688,10 @@ if __name__ == "__main__":
     body, _ = exporter.from_notebook_node(nb, resources={"metadata": {"name": "Will there be a bike? Progress report"}})
     OUT.with_suffix(".html").write_text(body)
     print("wrote", OUT, "and", OUT.with_suffix(".html"))
+    kn = nbformat.v4.new_notebook(cells=[nbformat.v4.new_markdown_cell(KEY.strip())])
+    kn.metadata["kernelspec"] = nb.metadata["kernelspec"]
+    nbformat.write(kn, OUT.with_name("key_findings.ipynb"))
+    print("wrote", OUT.with_name("key_findings.ipynb"))
     print("draft tags:")
     for tag, words in TAGS:
         print(f"  [{tag}] {words} ...")
